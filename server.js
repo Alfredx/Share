@@ -17,13 +17,7 @@ function start(route, handle) {
         var pathName = url.parse(request.url).pathname;
         console.log("Request for " + pathName + " received.");
 
-        request.setEncoding("utf8");
-        request.addListener("data", function(chunk) {
-            postData += chunk;
-        });
-        request.addListener("end", function() {
-            route(pathName, handle, response, postData);
-        });
+        route(pathName, handle, request, response);
     };
 
     http.createServer(onRequest).listen(8000);

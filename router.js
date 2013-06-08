@@ -6,12 +6,12 @@
  * The real routing method
  * @param  {String} pathName The path name in url.
  * @param  {Object} handle The key-value dict for mapping url to its handler functions.
- * @param  {Object} response The full response Object.
- * @param  {String} postData The string that contains all the data in POST request.
+ * @param  {Object} request The full request object.
+ * @param  {Object} response The full response object.
  */
-function route(pathName, handle, response, postData) {
+function route(pathName, handle, request, response) {
     if (typeof handle[pathName] === 'function') {
-        handle[pathName](response, postData);
+        handle[pathName](request, response);
     } else {
         // 404 page.
         console.log("NO MAPPING?! " + pathName);

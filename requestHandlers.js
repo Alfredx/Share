@@ -4,6 +4,8 @@
 
 var url = require("url");
 var querystring = require("querystring");
+var fs = require("fs");
+var formidable = require("formidable");
 
 /*
 // .pathname => pathname
@@ -19,54 +21,66 @@ query_dict = querystring.parse(parsed_result.query);
  * @param  {Object} response The full response object.
  * @return none.
  */
-function hello(response, postData) {
-    console.log("In function hello");
+function hello(request, response) {
+    console.log("In function hello()");
 
     var sleep = function(milliSeconds) {
         var startTime = new Date().getTime();
         while (new Date().getTime() < startTime + milliSeconds);
     };
 
-    var body = '<html>'+
-        '<head>'+
-        '<meta http-equiv="Content-Type" content="text/html; '+
-        'charset=UTF-8" />'+
-        '</head>'+
-        '<body>'+
-        '<form action="/upload" method="post">'+
-        '<textarea name="text" rows="20" cols="60"></textarea>'+
-        '<input type="submit" value="Submit text" />'+
-        '</form>'+
-        '</body>'+
+    var body =
+        '<html>' +
+            '<head>' +
+                '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />' +
+            '</head>' +
+            '<body>' +
+                '<form action="/upload" enctype="multipart/form-data" method="post">' +
+                    '<input type="file" name="upload">' +
+                    '<input type="submit" value="Upload file" />' +
+                '</form>'+
+            '</body>' +
         '</html>';
 
     response.writeHead(200, {
         "Content-Type": "text/html"
     });
-    response.write("Running hello()");
     response.write(body);
-    response.write('\n');
-    response.write("By Andriy");
     response.end();
 }
 
 
-function upload(response, postData) {
-    console.log("In function world");
+function upload(request, response) {
+    console.log("In function upload()");
 
-    data = querystring.parse(postData)['text'];
-
-    response.writeHead(200, {
-        "Content-Type": "text/plain"
+    var form = new formidable.IncomingForm();
+    console.log("   About to parse");
+    form.parse(request, function(err, fields, files) {
+        console.log("   Parsing done");
+        fs.renameSync(files.upload.path, "./tmp/test.png");
+        response.writeHead(200, {'Content-Type': 'text/html'});
+        response.write("Received img: <br/>");
+        response.write('<img src="/show"/>');
+        response.end();
     });
-    response.write("Running upload()");
-    response.write('\n');
-    response.write(data);
-    response.write('\n');
-    response.write("By Andriy");
-    response.end();
+}
+
+
+function show(request, response) {
+    console.log("In function show()");
+    fs.readFile("./tmp/test.png", "binary", function(error, file) {
+        if (error) {
+            response.writeHead(500, {"Content-Type": "text/plain"});
+            response.write("Error: " + error);
+        } else {
+            response.writeHead(200, {"Content-Type": "image/png"});
+            response.write(file, "binary");
+        }
+        response.end();
+    });
 }
 
 
 exports.hello = hello;
 exports.upload = upload;
+exports.show = show;
