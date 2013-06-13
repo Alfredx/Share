@@ -17,6 +17,11 @@ The following HTML(5) features might be employed:
 * Server-Sent-Events?
 * TO BE CONTINUED..
 
+======
+
+After checking out, "npm install" to fulfill the dependency of this project.
+
+
 [bump]: https://bu.mp/
 [geo]: http://www.w3.org/TR/2012/PR-geolocation-API-20120510/
 [file]: http://www.w3.org/TR/FileAPI/
