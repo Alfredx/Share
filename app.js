@@ -4,7 +4,7 @@
  */
 
 var express = require('express');
-var routes = require('./routes/index');
+var handlers = require('./routes/all');
 var http = require('http');
 var path = require('path');
 
@@ -26,8 +26,9 @@ if ('development' == app.get('env')) {
     app.use(express.errorHandler());
 }
 
-app.get('/', routes.index);
-// app.get('/users', user.list);
+app.get('/', handlers.index);
+app.post('/connect', handlers.connect);
+app.post('/send', handlers.send);
 
 http.createServer(app).listen(app.get('port'), function(){
     console.log('Express server listening on port ' + app.get('port'));

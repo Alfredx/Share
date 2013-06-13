@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>XShare - <%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css'/>
+</head>
+<body>
+    <h1>XShare - <%= title %></h1>
+    <form action="/send" enctype="multipart/form-data" method="post">
+        <!-- uncomment the "Multiple files" verison
+        <input type="file" name="upload" id="sendFile" multiple/>
+        -->
+        <input type="file" name="upload" id="sendFile"/>
+        <output id="selectedList"></output>
+        <button type="button" id="sendButton">Send</button>
+    </form>
+
+    <script type="text/javascript" src="/javascripts/send.js"></script>
+</body>
+</html>
