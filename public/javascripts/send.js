@@ -10,6 +10,8 @@ var xs = xs || {};
 xs.fileField = document.getElementById('sendFile');
 // output 
 xs.outputField = document.getElementById('selectedList');
+// send or receive
+xs.actButton = document.getElementById('actButton');
 // file to send
 // TODO: just handle one file for now
 xs.selectedFile = null;
@@ -20,7 +22,8 @@ xs.selectedFile = null;
 xs.fileField.addEventListener('change', function(evt) {
     var files = evt.target.files;
     if (files.length === 0) {
-        xs.outputField.innerHTML = "<ul><li>No file selected</li></ul>";
+        xs.outputField.innerHTML = "<ul></ul>";
+        xs.actButton.innerHTML = "Receive";
         return;
     }
 
@@ -44,19 +47,61 @@ xs.fileField.addEventListener('change', function(evt) {
         output.push('<li>' + results + '</li>');
     }
     xs.outputField.innerHTML = '<ul>' + output.join('') + "</ul>";
+    xs.actButton.innerHTML= "Send";
 }, false);
 
-xs.init = function() {
-    var sendButton = document.getElementById('sendButton');
-    sendButton.onclick = function() {
-        alert("Clicked");
+xs.trySend = function() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/send', true);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) {
+            return;
+        }
+        // Now it's ready
+        // TODO: what's next
+        if (xhr.status === 200) {
+            alert(xhr.responseText);
+        } else {
+            alert("SOMEHOW FAILED");
+        }
     };
+    xhr.send("HELLO WORLD");
 };
 
-// Check for the various File API support.
-if (window.File && window.FileReader && window.FileList && window.Blob) {
-    // All the File APIs are supported.
-    xs.init();
-} else {
+xs.tryReceive = function() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/test', true);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState !== 4) {
+            return;
+        }
+        // Now it's ready
+        // TODO: what's next
+        if (xhr.status === 200) {
+            alert("HERE IT IS: " + xhr.responseText);
+        } else {
+            alert("SOMEHOW FAILED?");
+        }
+    };
+    xhr.send();
+};
+
+
+/*
+ * Init
+ */
+if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+    // Check for the various File API support.
     alert('The File APIs are not fully supported in this browser.');
+} else if (!window.XMLHttpRequest) {
+    alert("Your browser doesn't support AJAX.");
+} else {
+    // All APIs supported
+    xs.actButton.onclick = function() {
+        if (xs.selectedFile === null) {
+            xs.tryReceive();
+        } else {
+            xs.trySend();
+        }
+    };
 }

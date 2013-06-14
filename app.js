@@ -29,6 +29,8 @@ if ('development' == app.get('env')) {
 app.get('/', handlers.index);
 app.post('/connect', handlers.connect);
 app.post('/send', handlers.send);
+// only for testing
+app.get('/test', handlers.test);
 
 http.createServer(app).listen(app.get('port'), function(){
     console.log('Express server listening on port ' + app.get('port'));

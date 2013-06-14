@@ -23,3 +23,7 @@ exports.send = function(req, res) {
     res.send("Uploaded?!");
     return;
 };
+
+exports.test = function(req, res) {
+    res.send("HELLO ANDRIY");
+};
