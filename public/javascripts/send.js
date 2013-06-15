@@ -13,8 +13,9 @@ xs.outputField = document.getElementById('selectedList');
 // send or receive
 xs.actButton = document.getElementById('actButton');
 // file to send
-// TODO: just handle one file for now
+// NOTE: just handle one file for now
 xs.selectedFile = null;
+
 
 /*
  * Update the description for files selected dynamically.
@@ -50,9 +51,12 @@ xs.fileField.addEventListener('change', function(evt) {
     xs.actButton.innerHTML= "Send";
 }, false);
 
+
+/**
+ * User triggers a web request to connect and send files.
+ */
 xs.trySend = function() {
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/send', true);
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
             return;
@@ -62,15 +66,24 @@ xs.trySend = function() {
         if (xhr.status === 200) {
             alert(xhr.responseText);
         } else {
-            alert("SOMEHOW FAILED");
+            alert("SOMEHOW FAILED: " + xhr.status);
         }
     };
-    xhr.send("HELLO WORLD");
+    xhr.open('POST', '/connect', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    ctx = {
+        'action': 'send'
+    };
+    xhr.send(xs.encodeDict(ctx));
 };
 
+
+/**
+ * User triggers a web request to connect and receive files.
+ * @return {[type]} [description]
+ */
 xs.tryReceive = function() {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/test', true);
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
             return;
@@ -80,10 +93,15 @@ xs.tryReceive = function() {
         if (xhr.status === 200) {
             alert("HERE IT IS: " + xhr.responseText);
         } else {
-            alert("SOMEHOW FAILED?");
+            alert("SOMEHOW FAILED: " + xhr.status);
         }
     };
-    xhr.send();
+    xhr.open('POST', '/connect', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    ctx = {
+        'action': 'receive'
+    };
+    xhr.send(xs.encodeDict(ctx));
 };
 
 
