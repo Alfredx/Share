@@ -36,6 +36,10 @@ exports.connect = function(req, res) {
     }
 
     randomID = req.body.randomID;
+    if (!randomID) {
+        res.send(400, "Need to specify the user's id in post data");
+        return;
+    }
 
     var base, target;
     if (action === 'send') {
@@ -45,6 +49,8 @@ exports.connect = function(req, res) {
         base = usersToReceive;
         target = usersToSend;
     }
+    delete base[randomID];
+    delete target[randomID];
 
     for (var u in target) {
         obj = target[u];
@@ -63,7 +69,14 @@ exports.connect = function(req, res) {
             res.send(200, "NOT Connected to anyone");
         }
     };
-    return;
+
+    // when user terminates the connection, remove corresponding data
+    (function(request, id, dict) {
+        request.on('close', function() {
+            delete dict[id];
+        });
+
+    })(req, randomID, base);
 };
 
 
@@ -78,5 +91,25 @@ exports.send = function(req, res) {
 
 
 exports.test = function(req, res) {
-    res.send("HELLO ANDRIY");
+    var newline = '<br/>';
+
+    results = "To Send: ";
+    results += newline;
+    toSend = [];
+    for (var u1 in usersToSend) {
+        toSend.push(u1);
+    }
+    results += toSend.join(', ');
+    results += newline;
+
+    results += "To Receive: ";
+    results += newline;
+    toReceive = [];
+    for (var u2 in usersToReceive) {
+        toReceive.push(u2);
+    }
+    results += toReceive.join(', ');
+    results += newline;
+
+    res.send(200, results);
 };

@@ -19,6 +19,8 @@ xs.selectedFile = null;
 // for displaying status.
 xs.statusField = document.getElementById('status');
 
+xs.randomID = Math.floor(Math.random() * 10000);
+
 
 /*
  * Update the description for files selected dynamically.
@@ -63,7 +65,7 @@ xs.trySend = function() {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
-            xs.statusField.innerHTML = "AJAX status: " + xhr.readyState;
+            xs.statusField.innerHTML = "ID: " + xs.randomID + "; AJAX status: " + xhr.readyState;
             return;
         }
         // Now it's ready
@@ -77,7 +79,7 @@ xs.trySend = function() {
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     ctx = {
         'action': 'send',
-        'randomID': Math.floor(Math.random() * 10000)
+        'randomID': xs.randomID
     };
     xhr.send(xs.encodeDict(ctx));
 };
@@ -90,7 +92,7 @@ xs.tryReceive = function() {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
-            xs.statusField.innerHTML = "AJAX status: " + xhr.readyState;
+            xs.statusField.innerHTML = "ID: " + xs.randomID + "; AJAX status: " + xhr.readyState;
             return;
         }
         // Now it's ready
@@ -104,7 +106,7 @@ xs.tryReceive = function() {
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     ctx = {
         'action': 'receive',
-        'randomID': Math.floor(Math.random() * 10000)
+        'randomID': xs.randomID
     };
     xhr.send(xs.encodeDict(ctx));
 };
