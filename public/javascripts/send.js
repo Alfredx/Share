@@ -16,6 +16,9 @@ xs.actButton = document.getElementById('actButton');
 // NOTE: just handle one file for now
 xs.selectedFile = null;
 
+// for displaying status.
+xs.statusField = document.getElementById('status');
+
 
 /*
  * Update the description for files selected dynamically.
@@ -25,6 +28,7 @@ xs.fileField.addEventListener('change', function(evt) {
     if (files.length === 0) {
         xs.outputField.innerHTML = "<ul></ul>";
         xs.actButton.innerHTML = "Receive";
+        xs.selectedFile = null;
         return;
     }
 
@@ -59,20 +63,21 @@ xs.trySend = function() {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
+            xs.statusField.innerHTML = "AJAX status: " + xhr.readyState;
             return;
         }
         // Now it's ready
-        // TODO: what's next
         if (xhr.status === 200) {
-            alert(xhr.responseText);
+            xs.statusField.innerHTML = xhr.responseText;
         } else {
-            alert("SOMEHOW FAILED: " + xhr.status);
+            xs.statusField.innerHTML = "SOMEHOW FAILED: " + xhr.status;
         }
     };
     xhr.open('POST', '/connect', true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     ctx = {
-        'action': 'send'
+        'action': 'send',
+        'randomID': Math.floor(Math.random() * 10000)
     };
     xhr.send(xs.encodeDict(ctx));
 };
@@ -80,26 +85,26 @@ xs.trySend = function() {
 
 /**
  * User triggers a web request to connect and receive files.
- * @return {[type]} [description]
  */
 xs.tryReceive = function() {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
+            xs.statusField.innerHTML = "AJAX status: " + xhr.readyState;
             return;
         }
         // Now it's ready
-        // TODO: what's next
         if (xhr.status === 200) {
-            alert("HERE IT IS: " + xhr.responseText);
+            xs.statusField.innerHTML = xhr.responseText;
         } else {
-            alert("SOMEHOW FAILED: " + xhr.status);
+            xs.statusField.innerHTML = "SOMEHOW FAILED: " + xhr.status;
         }
     };
     xhr.open('POST', '/connect', true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     ctx = {
-        'action': 'receive'
+        'action': 'receive',
+        'randomID': Math.floor(Math.random() * 10000)
     };
     xhr.send(xs.encodeDict(ctx));
 };
