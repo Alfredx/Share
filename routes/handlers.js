@@ -8,7 +8,7 @@ exports.index = function(req, res){
     var ctx = {
         title: 'Send or Receive'
     };
-    res.render('send', ctx);
+    res.render('all', ctx);
 };
 
 

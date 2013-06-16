@@ -119,15 +119,20 @@ xs.tryReceive = function() {
 };
 
 
-/*
- * Init
+/**
+ * Init and try to connect to server.
  */
-if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+(function() {
     // Check for the various File API support.
-    alert('The File APIs are not fully supported in this browser.');
-} else if (!window.XMLHttpRequest) {
-    alert("Your browser doesn't support AJAX.");
-} else {
+    if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+        alert('The File APIs are not fully supported in this browser.');
+        return;
+    } else if (!window.XMLHttpRequest) {
+        // TODO: after socket.io, AJAX checking is needed?
+        alert("Your browser doesn't support AJAX.");
+        return;
+    }
+
     // All APIs supported
     xs.actButton.onclick = function() {
         if (xs.selectedFile === null) {
@@ -136,4 +141,4 @@ if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
             xs.trySend();
         }
     };
-}
+})();
