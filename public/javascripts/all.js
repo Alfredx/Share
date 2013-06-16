@@ -16,10 +16,17 @@ xs.actButton = document.getElementById('actButton');
 // NOTE: just handle one file for now
 xs.selectedFile = null;
 
-// for displaying status.
-xs.statusField = document.getElementById('status');
-
 xs.randomID = Math.floor(Math.random() * 10000);
+
+
+/**
+ * Display the message to the page.
+ * @param  {String} msg The message to present.
+ */
+xs.showMessage = function(msg) {
+    var field = document.getElementById('status');
+    field.innerHTML = msg;
+};
 
 
 /*
@@ -65,14 +72,14 @@ xs.trySend = function() {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
-            xs.statusField.innerHTML = "ID: " + xs.randomID + "; AJAX status: " + xhr.readyState;
+            xs.showMessage("ID: " + xs.randomID + "; AJAX status: " + xhr.readyState);
             return;
         }
         // Now it's ready
         if (xhr.status === 200) {
-            xs.statusField.innerHTML = xhr.responseText;
+            xs.showMessage(xhr.responseText);
         } else {
-            xs.statusField.innerHTML = "SOMEHOW FAILED: " + xhr.status;
+            xs.showMessage("SOMEHOW FAILED: " + xhr.status);
         }
     };
     xhr.open('POST', '/connect', true);
@@ -92,14 +99,14 @@ xs.tryReceive = function() {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
-            xs.statusField.innerHTML = "ID: " + xs.randomID + "; AJAX status: " + xhr.readyState;
+            xs.showMessage("ID: " + xs.randomID + "; AJAX status: " + xhr.readyState);
             return;
         }
         // Now it's ready
         if (xhr.status === 200) {
-            xs.statusField.innerHTML = xhr.responseText;
+            xs.showMessage(xhr.responseText);
         } else {
-            xs.statusField.innerHTML = "SOMEHOW FAILED: " + xhr.status;
+            xs.showMessage("SOMEHOW FAILED: " + xhr.status);
         }
     };
     xhr.open('POST', '/connect', true);

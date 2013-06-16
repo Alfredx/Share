@@ -4,7 +4,7 @@
  */
 
 var express = require('express');
-var handlers = require('./routes/all');
+var handlers = require('./routes/handlers');
 var http = require('http');
 var path = require('path');
 
