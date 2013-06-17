@@ -173,7 +173,14 @@ var pairToReceive = function(socket) {
  * @param  {Number} fileSize  The size of the file to send.
  */
 var prepareToSend = function(partnerID, fileName, fileSize) {
-    // TODO: finish this method
+    var hint = "Confirm to send '" + fileName + "' " +
+               "(" + xs.sizeToString(fileSize) + ") " +
+               "to user " + partnerID;
+    if (confirm(hint)) {
+        // TODO: confirmed, send now
+    } else {
+        // not confirmed, tell the other user
+    }
     showMessage('Prepare to send files to user ' + partnerID);
     console.log("Matched with " + partnerID + ", prepare to send files");
 };
@@ -186,6 +193,14 @@ var prepareToSend = function(partnerID, fileName, fileSize) {
  * @param  {Number} fileSize  The size of the file to send.
  */
 var prepareToReceive = function(partnerID, fileName, fileSize) {
+    var hint = "Confirm to receive '" + fileName + "' " +
+               "(" + xs.sizeToString(fileSize) + ") " +
+               "from user " + partnerID;
+    if (confirm(hint)) {
+        // TODO: confirmed, receive now
+    } else {
+        // not confirmed, tell the other user
+    }
     // TODO: finish this method
     showMessage('Prepare to receive files from user ' + partnerID);
     console.log("Matched with " + partnerID + ", prepare to receive files");

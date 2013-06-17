@@ -54,3 +54,52 @@ xs.assert = function(predication, errorMessage) {
         throw new Error(errorMessage);
     }
 };
+
+
+/**
+ * Convert size to a string for display.
+ * @param  {Number} size In bytes.
+ * @return {String}      The string containing digits and units.
+ */
+xs.sizeToString = function(size) {
+    /**
+     * All available units.
+     * @type {Array}
+     */
+    var units = ['B', 'KB', 'MB', 'GB'];
+
+    /**
+     * Unit => how many it needs to divide.
+     * @type {Object}
+     */
+    var dividers = {
+        'B': 1,
+        'KB': 1024,
+        'MB': 1024 * 1024,
+        'GB': 1024 * 1024 * 1024
+    };
+
+    /**
+     * Given a size, determine its unit.
+     * @param  {Number} totalSize The size to determine.
+     * @return {String}           The proper unit.
+     */
+    var determineUnit = function(totalSize) {
+        for (var i = 0; i < units.length; i++) {
+            if (totalSize < 1024) {
+                return units[i];
+            }
+
+            totalSize /= 1024;
+        }
+        return units[units.length - 1];
+    };
+
+    var unit = determineUnit(size);
+    console.log('Unit' + unit);
+    var divider = dividers[unit];
+    console.log('divider ' + divider);
+    size /= divider;
+    size = Math.round(size * 100) / 100;
+    return size + unit;
+};

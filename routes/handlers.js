@@ -9,17 +9,27 @@
  */
 var socketID = 0;
 
-
 /*
  * All users that are trying to send files.
- * TODO: change the description, it should save IP, Geo, and the socket
- * 'user id' => 'success callback, timeout callback'
+ * 'user/socket id' => {
+ *     'socket': socket,
+ *     'ip': ip address,
+ *     'port': port,
+ *     'geo': geolocation,
+ *     'fileName': fileName,
+ *     'fileSize': fileSize
+ * }
  */
 var toSend = {};
+
 /*
  * All users that are trying to receive files.
- * TODO: change the description, it should save IP, Geo, and the socket
- * 'user id' => 'success callback, timeout callback'
+ * 'user/socket id' => {
+ *     'socket': socket,
+ *     'ip': ip address,
+ *     'port': port,
+ *     'geo': geolocation
+ * }
  */
 var toReceive = {};
 
@@ -65,9 +75,6 @@ var initSocket = function(socket) {
         };
     })(socketID));
 
-    // IP address
-    console.log("socket connected from " + parseAddress(socket) + ':' + parsePort(socket));
-
     /**
      * User tries to receive files.
      * @param  {Number} receiveID The ID of the user to receive files.
@@ -89,21 +96,31 @@ var initSocket = function(socket) {
 
         if (sendID) {
             // successfully finds someone to pair
-            toSend[sendID].emit('send', {
+            var partner = toSend[sendID].socket;
+            var fileName = toSend[sendID].fileName;
+            var fileSize = toSend[sendID].fileSize;
+
+            partner.emit('send', {
                 'partnerID': receiveID,
-                'fileName': fileInfo.name,
-                'fileSize': fileInfo.size
+                'fileName': fileName,
+                'fileSize': fileSize
             });
             socket.emit('receive', {
                 'partnerID': sendID,
-                'fileName': fileInfo.name,
-                'fileSize': fileInfo.size
+                'fileName': fileName,
+                'fileSize': fileSize
             });
             delete toSend[sendID];
         } else {
             // fails to pair
-            // TODO: add timeout control
-            toReceive[receiveID] = socket;
+            var obj = {};
+            obj.socket = socket;
+            obj.ip = parseAddress(socket);
+            obj.port = parsePort(socket);
+            // TODO: also save geolocation data
+
+            toReceive[receiveID] = obj;
+            // TODO: also add timeout control
         }
     });
 
@@ -132,7 +149,8 @@ var initSocket = function(socket) {
 
         if (receiveID) {
             // successfully finds someone to pair
-            toReceive[receiveID].emit('receive', {
+            var partner = toReceive[receiveID].socket;
+            partner.emit('receive', {
                 'partnerID': sendID,
                 'fileName': fileInfo.name,
                 'fileSize': fileInfo.size
@@ -145,8 +163,16 @@ var initSocket = function(socket) {
             delete toReceive[receiveID];
         } else {
             // fails to pair
+            var obj = {};
+            obj.socket = socket;
+            obj.ip = parseAddress(socket);
+            obj.port = parsePort(socket);
+            obj.fileName = fileInfo.name;
+            obj.fileSize = fileInfo.size;
+            // TODO: also add geolocation data
+
+            toSend[sendID] = obj;
             // TODO: add timeout control
-            toSend[sendID] = socket;
         }
     });
 };
