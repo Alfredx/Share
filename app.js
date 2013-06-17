@@ -19,6 +19,9 @@ app.use(express.favicon());
 app.use(express.logger('dev'));
 app.use(express.bodyParser());
 app.use(express.methodOverride());
+// randomly generated key
+app.use(express.cookieParser('H9Ehmin9oIDgMLGV'));
+app.use(express.session());
 app.use(app.router);
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -28,13 +31,12 @@ if ('development' == app.get('env')) {
 }
 
 app.get('/', handlers.index);
-app.post('/connect', handlers.connect);
 app.post('/send', handlers.send);
 // only for testing
 app.get('/test', handlers.test);
 
 var server = http.createServer(app);
-var io = sio.listen(server);
+var io = sio.listen(server, {log: false});
 // Initialize socket.io message handling
 handlers.init(io);
 
