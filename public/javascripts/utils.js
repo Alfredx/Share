@@ -37,3 +37,20 @@ xs.randomKey = function(len) {
     }
     return cs.join('');
 };
+
+
+/**
+ * Stop when something unexpected happens.
+ * @param  {Boolean} predication The expression expected to be true.
+ * @param  {String} errorMessage The message to display when predication is false.
+ */
+xs.assert = function(predication, errorMessage) {
+    if (!predication) {
+        if (!errorMessage) {
+            errorMessage = "Assertion failed";
+        }
+
+        alert(errorMessage);
+        throw new Error(errorMessage);
+    }
+};

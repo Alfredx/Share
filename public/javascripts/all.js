@@ -5,6 +5,9 @@
 // xshare
 var xs = xs || {};
 
+// for debugging
+var assert = xs.assert;
+
 
 /**
  * Display the message to the page.
@@ -21,7 +24,8 @@ var fileField = document.getElementById('sendFile');
 // output 
 var outputField = document.getElementById('selectedList');
 // send or receive
-var actButton = document.getElementById('actButton');
+var sendButton = document.getElementById('sendButton');
+var receiveButton = document.getElementById('receiveButton');
 
 
 /**
@@ -53,7 +57,7 @@ fileField.addEventListener('change', function(evt) {
     var files = evt.target.files;
     if (files.length === 0) {
         outputField.innerHTML = "<ul></ul>";
-        actButton.innerHTML = "Receive";
+        sendButton.disabled = true;
         selectedFile = null;
         return;
     }
@@ -78,7 +82,7 @@ fileField.addEventListener('change', function(evt) {
         output.push('<li>' + results + '</li>');
     }
     outputField.innerHTML = '<ul>' + output.join('') + "</ul>";
-    actButton.innerHTML= "Send";
+    sendButton.disabled = false;
 }, false);
 
 
@@ -122,31 +126,43 @@ var tryReceive = function(socket) {
 
 
 /**
- * Try to pair another user to share files. (send or receive)
+ * Try to pair another user to share files. (send)
  * @param  {Object} socket The socket used in socket.io.
  */
-var tryPair = function(socket) {
+var pairToSend = function(socket) {
     if (!isConnected) {
         alert("Not connected to server => unable to share!");
         return;
     }
 
-    if (selectedFile === null) {
-        socket.emit('receive', {
-            'id': id,
-            // TODO: geo-location is not passed at present
-            'geo': null
-        });
-        showMessage("Finding someone nearby to send files.. [me]" + id);
-    } else {
-        socket.emit('send', {
-            'id': id,
-            // TODO: geo-location is not passed at present
-            'geo': null,
-            'fileInfo': selectedFile
-        });
-        showMessage("Finding someone nearby to receive files.. [me]" + id);
+    assert (selectedFile !== null);
+
+    socket.emit('send', {
+        'id': id,
+        // TODO: geo-location is not passed at present
+        'geo': null,
+        'fileInfo': selectedFile
+    });
+    showMessage("Finding someone nearby to receive files.. [me]" + id);
+};
+
+
+/**
+ * Try to pair another user to share files. (receive)
+ * @param  {Object} socket The socket used in socket.io.
+ */
+var pairToReceive = function(socket) {
+    if (!isConnected) {
+        alert("Not connected to server => unable to share!");
+        return;
     }
+
+    socket.emit('receive', {
+        'id': id,
+        // TODO: geo-location is not passed at present
+        'geo': null
+    });
+    showMessage("Finding someone nearby to send files.. [me]" + id);
 };
 
 
@@ -230,7 +246,11 @@ var prepareToReceive = function(partner) {
         prepareToSend(data);
     });
 
-    actButton.onclick = function() {
-        tryPair(socket);
+    sendButton.onclick = function() {
+        pairToSend(socket);
+    };
+
+    receiveButton.onclick = function() {
+        pairToReceive(socket);
     };
 })();
