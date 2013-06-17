@@ -12,11 +12,13 @@ var socketID = 0;
 
 /*
  * All users that are trying to send files.
+ * TODO: change the description, it should save IP, Geo, and the socket
  * 'user id' => 'success callback, timeout callback'
  */
 var toSend = {};
 /*
  * All users that are trying to receive files.
+ * TODO: change the description, it should save IP, Geo, and the socket
  * 'user id' => 'success callback, timeout callback'
  */
 var toReceive = {};
@@ -70,7 +72,11 @@ var initSocket = function(socket) {
      * User tries to receive files.
      * @param  {Number} receiveID The ID of the user to receive files.
      */
-    socket.on('receive', function(receiveID) {
+    socket.on('receive', function(data) {
+        var receiveID = data.id;
+        // TODO: geo-location is not used currently.
+        var geolocation = data.geo;
+
         delete toSend[receiveID];
         delete toReceive[receiveID];
 
@@ -88,6 +94,7 @@ var initSocket = function(socket) {
             delete toSend[sendID];
         } else {
             // fails to pair
+            // TODO: add timeout control
             toReceive[receiveID] = socket;
         }
     });
@@ -98,6 +105,7 @@ var initSocket = function(socket) {
      */
     socket.on('send', function(data) {
         var sendID = data.id;
+        var geolocation = data.geo;
         var fileInfo = data.fileInfo;
 
         delete toSend[sendID];
@@ -117,6 +125,7 @@ var initSocket = function(socket) {
             delete toReceive[receiveID];
         } else {
             // fails to pair
+            // TODO: add timeout control
             toSend[sendID] = socket;
         }
     });
@@ -161,6 +170,7 @@ exports.index = function(req, res){
  * @param  {Object} res
  */
 exports.send = function(req, res) {
+    // TODO: may be used to save the upload file into tmp files
     res.send("Uploaded?!");
 };
 

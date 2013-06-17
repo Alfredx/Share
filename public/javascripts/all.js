@@ -87,8 +87,7 @@ fileField.addEventListener('change', function(evt) {
  * @param  {Object} socket The socket in socket.io.
  */
 var trySend = function(socket) {
-
-
+    // TODO: @deprecated, can be changed to: send file after pairing
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
@@ -102,9 +101,11 @@ var trySend = function(socket) {
             showMessage("SOMEHOW FAILED: " + xhr.status);
         }
     };
+    // TODO: change to another url
     xhr.open('POST', '/connect', true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     ctx = {
+        // TODO: pass the connection id rather than the user id
         'randomID': id
     };
     xhr.send(xs.encodeDict(ctx));
@@ -116,27 +117,7 @@ var trySend = function(socket) {
  * @param  {Object} socket The socket in socket.io.
  */
 var tryReceive = function(socket) {
-
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState !== 4) {
-            showMessage("ID: " + id + "; AJAX status: " + xhr.readyState);
-            return;
-        }
-        // Now it's ready
-        if (xhr.status === 200) {
-            showMessage(xhr.responseText);
-        } else {
-            showMessage("SOMEHOW FAILED: " + xhr.status);
-        }
-    };
-    xhr.open('POST', '/connect', true);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    ctx = {
-        'action': 'receive',
-        'randomID': id
-    };
-    xhr.send(xs.encodeDict(ctx));
+    // TODO: @deprecated, may change to: new a url, click to open it in a new tab, then download a static file
 };
 
 
@@ -151,13 +132,20 @@ var tryPair = function(socket) {
     }
 
     if (selectedFile === null) {
-        socket.emit('receive', id);
+        socket.emit('receive', {
+            'id': id,
+            // TODO: geo-location is not passed at present
+            'geo': null
+        });
+        showMessage("Finding someone nearby to send files.. [me]" + id);
     } else {
         socket.emit('send', {
             'id': id,
+            // TODO: geo-location is not passed at present
+            'geo': null,
             'fileInfo': selectedFile
         });
-        showMessage("Try to pair.. [me] " + id);
+        showMessage("Finding someone nearby to receive files.. [me]" + id);
     }
 };
 
