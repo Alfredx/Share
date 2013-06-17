@@ -33,10 +33,11 @@ var selectedFile = null;
 
 /**
  * The identification for a specific user.
- * No login required.
- * @type {String}
+ * Set by the server.
+ * NOTE: No login required.
+ * @type {Number}
  */
-var randomID = Math.floor(Math.random() * 10000);
+var id = null;
 
 /**
  * Is this page connected to server?
@@ -45,7 +46,7 @@ var randomID = Math.floor(Math.random() * 10000);
 var isConnected = false;
 
 
-/*
+/**
  * Update the description for files selected dynamically.
  */
 fileField.addEventListener('change', function(evt) {
@@ -83,12 +84,15 @@ fileField.addEventListener('change', function(evt) {
 
 /**
  * User triggers a web request to connect and send files.
+ * @param  {Object} socket The socket in socket.io.
  */
-xs.trySend = function() {
+var trySend = function(socket) {
+
+
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
-            showMessage("ID: " + randomID + "; AJAX status: " + xhr.readyState);
+            showMessage("ID: " + id + "; AJAX status: " + xhr.readyState);
             return;
         }
         // Now it's ready
@@ -101,8 +105,7 @@ xs.trySend = function() {
     xhr.open('POST', '/connect', true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     ctx = {
-        'action': 'send',
-        'randomID': randomID
+        'randomID': id
     };
     xhr.send(xs.encodeDict(ctx));
 };
@@ -110,12 +113,14 @@ xs.trySend = function() {
 
 /**
  * User triggers a web request to connect and receive files.
+ * @param  {Object} socket The socket in socket.io.
  */
-xs.tryReceive = function() {
+var tryReceive = function(socket) {
+
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) {
-            showMessage("ID: " + randomID + "; AJAX status: " + xhr.readyState);
+            showMessage("ID: " + id + "; AJAX status: " + xhr.readyState);
             return;
         }
         // Now it's ready
@@ -129,9 +134,53 @@ xs.tryReceive = function() {
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     ctx = {
         'action': 'receive',
-        'randomID': randomID
+        'randomID': id
     };
     xhr.send(xs.encodeDict(ctx));
+};
+
+
+/**
+ * Try to pair another user to share files. (send or receive)
+ * @param  {Object} socket The socket used in socket.io.
+ */
+var tryPair = function(socket) {
+    if (!isConnected) {
+        alert("Not connected to server => unable to share!");
+        return;
+    }
+
+    if (selectedFile === null) {
+        socket.emit('receive', id);
+    } else {
+        socket.emit('send', {
+            'id': id,
+            'fileInfo': selectedFile
+        });
+        showMessage("Try to pair.. [me] " + id);
+    }
+};
+
+
+/**
+ * After pairing succeeded, prepare to send files.
+ * @param  {Number} partner The ID of the partner of this sharing.
+ */
+var prepareToSend = function(partner) {
+    // TODO: finish this method
+    showMessage('Prepare to send files to user ' + partner);
+    console.log("Matched with " + partner + ", prepare to send files");
+};
+
+
+/**
+ * After pairing succeeded, prepare to receive files.
+ * @param  {Number} partner The ID of the partner of this sharing.
+ */
+var prepareToReceive = function(partner) {
+    // TODO: finish this method
+    showMessage('Prepare to receive files from user ' + partner);
+    console.log("Matched with " + partner + ", prepare to receive files");
 };
 
 
@@ -151,6 +200,7 @@ xs.tryReceive = function() {
 
     // All APIs supported
     var socket = io.connect('/');
+
     socket.on('connecting', function() {
         isConnected = false;
         showMessage("Connecting to server..");
@@ -167,20 +217,32 @@ xs.tryReceive = function() {
         isConnected = false;
         showMessage('Failed to connect server, is the network working?');
     });
+    socket.on('error', function() {
+        // something bad happened..
+        showMessage('Error happened.. Why?');
+        console.log('Error happened.. Why?');
+    });
 
-    // TODO: following needs to be put in somewhere else.
-    socket.on('msg', function(data) {
-        console.log("MSG received: " + data);
-        socket.emit('browser', {
-            'data': "HELLO ANDRIY"
-        });
+    // The followings are self-defined events.
+
+    /**
+     * Set the unique id for this connection.
+     * @param  {Number} data The ID to be set.
+     */
+    socket.on('set_id', function(data) {
+        id = data;
+        showMessage('Connected, id is ' + data);
+    });
+
+    socket.on('receive', function(data) {
+        prepareToReceive(data);
+    });
+
+    socket.on('send', function(data) {
+        prepareToSend(data);
     });
 
     actButton.onclick = function() {
-        if (selectedFile === null) {
-            xs.tryReceive();
-        } else {
-            xs.trySend();
-        }
+        tryPair(socket);
     };
 })();
