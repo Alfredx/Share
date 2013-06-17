@@ -89,8 +89,16 @@ var initSocket = function(socket) {
 
         if (sendID) {
             // successfully finds someone to pair
-            toSend[sendID].emit('send', receiveID);
-            socket.emit('receive', sendID);
+            toSend[sendID].emit('send', {
+                'partnerID': receiveID,
+                'fileName': fileInfo.name,
+                'fileSize': fileInfo.size
+            });
+            socket.emit('receive', {
+                'partnerID': sendID,
+                'fileName': fileInfo.name,
+                'fileSize': fileInfo.size
+            });
             delete toSend[sendID];
         } else {
             // fails to pair
@@ -106,6 +114,10 @@ var initSocket = function(socket) {
     socket.on('send', function(data) {
         var sendID = data.id;
         var geolocation = data.geo;
+        /**
+         * A JSON object that contains name, type, size, lastModifiedDate
+         * @type {Object}
+         */
         var fileInfo = data.fileInfo;
 
         delete toSend[sendID];
@@ -120,8 +132,16 @@ var initSocket = function(socket) {
 
         if (receiveID) {
             // successfully finds someone to pair
-            toReceive[receiveID].emit('receive', sendID);
-            socket.emit('send', receiveID);
+            toReceive[receiveID].emit('receive', {
+                'partnerID': sendID,
+                'fileName': fileInfo.name,
+                'fileSize': fileInfo.size
+            });
+            socket.emit('send', {
+                'partnerID': receiveID,
+                'fileName': fileInfo.name,
+                'fileSize': fileInfo.size
+            });
             delete toReceive[receiveID];
         } else {
             // fails to pair

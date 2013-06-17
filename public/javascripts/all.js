@@ -169,22 +169,26 @@ var pairToReceive = function(socket) {
 /**
  * After pairing succeeded, prepare to send files.
  * @param  {Number} partner The ID of the partner of this sharing.
+ * @param  {String} fileName  The name of the file to send.
+ * @param  {Number} fileSize  The size of the file to send.
  */
-var prepareToSend = function(partner) {
+var prepareToSend = function(partnerID, fileName, fileSize) {
     // TODO: finish this method
-    showMessage('Prepare to send files to user ' + partner);
-    console.log("Matched with " + partner + ", prepare to send files");
+    showMessage('Prepare to send files to user ' + partnerID);
+    console.log("Matched with " + partnerID + ", prepare to send files");
 };
 
 
 /**
  * After pairing succeeded, prepare to receive files.
  * @param  {Number} partner The ID of the partner of this sharing.
+ * @param  {String} fileName  The name of the file to send.
+ * @param  {Number} fileSize  The size of the file to send.
  */
-var prepareToReceive = function(partner) {
+var prepareToReceive = function(partnerID, fileName, fileSize) {
     // TODO: finish this method
-    showMessage('Prepare to receive files from user ' + partner);
-    console.log("Matched with " + partner + ", prepare to receive files");
+    showMessage('Prepare to receive files from user ' + partnerID);
+    console.log("Matched with " + partnerID + ", prepare to receive files");
 };
 
 
@@ -239,11 +243,11 @@ var prepareToReceive = function(partner) {
     });
 
     socket.on('receive', function(data) {
-        prepareToReceive(data);
+        prepareToReceive(data.partnerID, data.fileName, data.fileSize);
     });
 
     socket.on('send', function(data) {
-        prepareToSend(data);
+        prepareToSend(data.partnerID, data.fileName, data.fileSize);
     });
 
     sendButton.onclick = function() {
