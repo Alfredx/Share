@@ -1,8 +1,26 @@
-
 /*
- * GET home page.
+ * All the handlers used in xshare.
  */
 
+
+/**
+ * Called in app.js to initialize and use other functions in this file.
+ * @param  {Object} io The socket.io object.
+ */
+exports.init = function(io) {
+    /**
+     * When a new connection comes
+     * @param  {Object} socket The socket for connection.
+     */
+    io.sockets.on('connection', function(socket) {
+        console.log("a socket has connected..");
+        socket.on('disconnect', function() {
+            // it has disconnected..
+            console.log('a socket has disconnected..');
+        });
+        socket.emit('msg', "HELLO ANDRIY");
+    });
+};
 
 exports.index = function(req, res){
     var ctx = {

@@ -7,6 +7,7 @@ var express = require('express');
 var handlers = require('./routes/handlers');
 var http = require('http');
 var path = require('path');
+var sio = require('socket.io');
 
 var app = express();
 
@@ -32,6 +33,11 @@ app.post('/send', handlers.send);
 // only for testing
 app.get('/test', handlers.test);
 
-http.createServer(app).listen(app.get('port'), function(){
+var server = http.createServer(app);
+var io = sio.listen(server);
+// Initialize socket.io message handling
+handlers.init(io);
+
+server.listen(app.get('port'), function(){
     console.log('Express server listening on port ' + app.get('port'));
 });
