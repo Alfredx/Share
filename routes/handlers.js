@@ -111,6 +111,15 @@ function Connection() {
      * @type {Boolean}
      */
     this.receiverConfirmed = false;
+    /**
+     * The status of this connection.
+     * Can be:
+     *     INIT: just inited
+     *     SENDING: sender is sending
+     *     RECEIVING: receiver is receiving
+     * @type {String}
+     */
+    this.status = "INIT";
 }
 
 
@@ -170,6 +179,42 @@ var paired = {
 
         this._connections[sender.id] = con;
         this._connections[receiver.id] = con;
+    },
+
+    /**
+     * A user confirms to share files.
+     * @param  {Number} myID      The ID of the user that confirms.
+     * @param  {Number} partnerID The ID of the other user.
+     */
+    confirm: function(myID, partnerID) {
+        if (!(myID in this._connections) || !(partnerID in this._connections)) {
+            return;
+        }
+
+        var con = this._connections[myID];
+        var sender = con.sender;
+        var receiver = con.receiver;
+
+        if (sender.id === myID) {
+            // this user is the sender
+            con.senderConfirmed = true;
+        } else {
+            // this user is the receiver
+            con.receiverConfirmed = true;
+        }
+
+        if (con.senderConfirmed && con.receiverConfirmed) {
+            // both confirmed, real start
+            sender.socket.emit('startSending', {
+                'senderID': sender.id,
+                'receiverID': receiver.id
+            });
+            receiver.socket.emit('startSending', {
+                'senderID': sender.id,
+                'receiverID': receiver.id
+            });
+            con.status = "SENDING";
+        }
     }
 };
 
@@ -364,7 +409,7 @@ var initSocket = function(socket) {
      * After finding two users, they confirm the connection.
      */
     socket.on('confirm', function(data) {
-        // TODO: finish this
+        paired.confirm(data.myID, data.partnerID);
     });
 };
 

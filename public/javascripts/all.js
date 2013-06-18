@@ -188,7 +188,11 @@ var confirmToSend = function(socket, partnerID, fileName, fileSize) {
                "(" + xs.sizeToString(fileSize) + ") " +
                "to user " + partnerID;
     if (confirm(hint)) {
-        // TODO: confirmed, send now
+        // confirmed, ready for sending
+        socket.emit('confirm', {
+            'myID': id,
+            'partnerID': partnerID
+        });
         showMessage('Confirmed to send files to user ' + partnerID);
     } else {
         // not confirmed, tell the other user
@@ -213,7 +217,11 @@ var confirmToReceive = function(socket, partnerID, fileName, fileSize) {
                "(" + xs.sizeToString(fileSize) + ") " +
                "from user " + partnerID;
     if (confirm(hint)) {
-        // TODO: confirmed, receive now
+        // confirmed, ready for receiving
+        socket.emit('confirm', {
+            'myID': id,
+            'partnerID': partnerID
+        });
         showMessage('Confirmed to receive files from user ' + partnerID);
     } else {
         // not confirmed, tell the other user
@@ -222,6 +230,23 @@ var confirmToReceive = function(socket, partnerID, fileName, fileSize) {
             'partnerID': partnerID
         });
         showMessage('You chose not to receive files from user ' + partnerID);
+    }
+};
+
+
+/**
+ * Both users have confirmed, it's time to start sending.
+ * @param  {Number} senderID   The ID of the sender.
+ * @param  {Number} receiverID The ID of the receiver.
+ */
+var onStartSending = function(senderID, receiverID) {
+    if (id === senderID) {
+        // self is the sender
+        showMessage("Confirmed, it's time for me to send files!!!");
+        // TODO: real start
+    } else if (id === receiverID) {
+        // self is the receiver
+        showMessage("Confirmed, user " + senderID + " has started sending..");
     }
 };
 
@@ -309,6 +334,13 @@ var confirmToReceive = function(socket, partnerID, fileName, fileSize) {
      */
     socket.on('betrayedReceiving', function(data) {
         showMessage("User " + data.partnerID + " chose not to receive files from you.");
+    });
+
+    /**
+     * Both users confirmed, it's time to start sending.
+     */
+    socket.on('startSending', function(data) {
+        onStartSending(data.senderID, data.receiverID);
     });
 
     /*
