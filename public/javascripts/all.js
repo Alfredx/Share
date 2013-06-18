@@ -35,6 +35,7 @@ var receiveButton = document.getElementById('receiveButton');
  */
 var selectedFile = null;
 
+
 /**
  * The identification for a specific user.
  * Set by the server.
@@ -43,27 +44,24 @@ var selectedFile = null;
  */
 var id = null;
 
-/**
- * The latitude of the geo-location.
- * @type {Number}
- */
-var geoLatitude = null;
-/**
- * The longitude of the geo-location.
- * @type {Number}
- */
-var geoLongitude = null;
-/**
- * The accuracy of the geo-location.
- * @type {Number}
- */
-var geoAccuracy = null;
 
 /**
  * Is this page connected to server?
  * @type {Boolean}
  */
 var isConnected = false;
+
+
+/**
+ * Geo-location data.
+ * Each field is of type Number.
+ * @type {Object}
+ */
+var geo = {
+    'latitude': null,
+    'longitude': null,
+    'accuracy': null
+};
 
 
 /**
@@ -286,9 +284,9 @@ var prepareToReceive = function(partnerID, fileName, fileSize) {
      */
     if (navigator.geolocation) {
         var onGeoSuccess = function(pos) {
-            geoLatitude = pos.coords.latitude;
-            geoLongitude = pos.coords.longitude;
-            geoAccuracy = pos.coords.accuracy;
+            geo.latitude = pos.coords.latitude;
+            geo.longitude = pos.coords.longitude;
+            geo.accuracy = pos.coords.accuracy;
         };
         var onGeoError = function(err) {
             var errors = {
