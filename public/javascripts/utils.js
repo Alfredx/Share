@@ -96,9 +96,7 @@ xs.sizeToString = function(size) {
     };
 
     var unit = determineUnit(size);
-    console.log('Unit' + unit);
     var divider = dividers[unit];
-    console.log('divider ' + divider);
     size /= divider;
     size = Math.round(size * 100) / 100;
     return size + unit;

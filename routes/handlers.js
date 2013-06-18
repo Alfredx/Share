@@ -13,26 +13,64 @@ var socketID = 0;
 
 /**
  * Containing all the information of a user.
- * @param {String} id       The socket id assigned.
- * @param {Object} socket   Socket object used in socket.io.
- * @param {String} ip       *.*.*.*
- * @param {Number} port     e.g. 80
- * @param {Object} geo      TODO: update geo-info
- * @param {String} fileName The name of the file user wants to send.
- *                          Or null if user just want to receive.
- * @param {Number} fileSize The size of the file user wants to send.
- *                          Or null if user just want to receive.
- * @param {Boolean} confirmed Whether user has confirmed connection.
  */
-function UserData(id, socket, ip, port, geo, fileName, fileSize, confirmed) {
-    this.id = id;
-    this.socket = socket;
-    this.ip = ip;
-    this.port = port;
-    this.geo = geo;
-    this.fileName = fileName;
-    this.fileSize = fileSize;
-    this.confirmed = confirmed || false;
+function UserData() {
+    /**
+     * The socket id assigned.
+     * @type {String}
+     */
+    this.id = null;
+    /**
+     * Socket object used in socket.io.
+     * @type {Object}
+     */
+    this.socket = null;
+
+    /**
+     * *.*.*.*
+     * @type {String}
+     */
+    this.ip = null;
+    /**
+     * e.g. 80
+     * @type {Number}
+     */
+    this.port = null;
+
+    /**
+     * The longitude of geolocation.
+     * @type {Number}
+     */
+    this.geoLongitude = null;
+    /**
+     * The latitude of geolocation.
+     * @type {Number}
+     */
+    this.geoLatitude = null;
+    /**
+     * The accuracy of geolocation.
+     * @type {Number}
+     */
+    this.geoAccuracy = null;
+
+    /**
+     * The name of the file user wants to send.
+     * Or null if user just want to receive.
+     * @type {String}
+     */
+    this.fileName = null;
+    /**
+     * The size of the file user wants to send.
+     * Or null if user just want to receive.
+     * @type {Number}
+     */
+    this.fileSize = null;
+
+    /**
+     * Whether user has confirmed connection.
+     * @type {Boolean}
+     */
+    this.confirmed = null;
 }
 
 /*
@@ -95,10 +133,9 @@ var pick = function(baseUser, targetUsers) {
  * Called when a user tries to receive files.
  * @param  {Object} socket The  object used in socket.io.
  * @param  {String} receiveID   The id for the user to receive.
- * @param  {Object} geolocation TODO: to update here.
+ * @param  {Object} geo         Null or A JSON object that contains latitude, longitude and accuracy.
  */
-var onTryReceive = function(socket, receiveID, geolocation) {
-    // TODO: geo-location is not used currently.
+var onPairToReceive = function(socket, receiveID, geo) {
     delete toSend[receiveID];
     delete toReceive[receiveID];
 
@@ -109,8 +146,11 @@ var onTryReceive = function(socket, receiveID, geolocation) {
     user.socket = socket;
     user.ip = parseAddress(socket);
     user.port = parsePort(socket);
-    // TODO: also save geolocation data
-    user.geo = geolocation;
+    if (geo) {
+        user.geoLatitude = geo.latitude;
+        user.geoLongitude = geo.longitude;
+        user.geoAccuracy = geo.accuracy;
+    }
 
     var partner = pick(user, toSend);
     if (partner) {
@@ -137,12 +177,12 @@ var onTryReceive = function(socket, receiveID, geolocation) {
 
 /**
  * Called when a user tries to send files.
- * @param  {Object} socket      The object used in socket.io.
- * @param  {String} sendID      The id for the user to send.
- * @param  {Object} geolocation TODO: to update here.
- * @param  {Object} fileInfo    A JSON object that contains name, type, size, lastModifiedDate.
+ * @param  {Object} socket   The object used in socket.io.
+ * @param  {String} sendID   The id for the user to send.
+ * @param  {Object} geo      Null or A JSON object that contains latitude, longitude and accuracy.
+ * @param  {Object} fileInfo A JSON object that contains name, type, size, lastModifiedDate.
  */
-var onTrySend = function(socket, sendID, geolocation, fileInfo) {
+var onPairToSend = function(socket, sendID, geo, fileInfo) {
     delete toSend[sendID];
     delete toReceive[sendID];
 
@@ -153,7 +193,11 @@ var onTrySend = function(socket, sendID, geolocation, fileInfo) {
     user.port = parsePort(socket);
     user.fileName = fileInfo.name;
     user.fileSize = fileInfo.size;
-    // TODO: also add geolocation data
+    if (geo) {
+        user.geoLongitude = geo.longitude;
+        user.geoLatitude = geo.latitude;
+        user.geoAccuracy = geo.accuracy;
+    }
 
     var partner = pick(user, toReceive);
     if (partner) {
@@ -201,15 +245,15 @@ var initSocket = function(socket) {
     /**
      * User tries to pair to receive files.
      */
-    socket.on('receive', function(data) {
-        onTryReceive(socket, data.id, data.geo);
+    socket.on('pairToReceive', function(data) {
+        onPairToReceive(socket, data.id, data.geo);
     });
 
     /**
      * User tries to pair to send files.
      */
-    socket.on('send', function(data) {
-        onTrySend(socket, data.id, data.geo, data.fileInfo);
+    socket.on('pairToSend', function(data) {
+        onPairToSend(socket, data.id, data.geo, data.fileInfo);
     });
 
     /**

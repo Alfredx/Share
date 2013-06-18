@@ -53,15 +53,13 @@ var isConnected = false;
 
 
 /**
- * Geo-location data.
- * Each field is of type Number.
+ * Geo-location data:
+    'latitude': {Number},
+    'longitude': {Number},
+    'accuracy': {Number}
  * @type {Object}
  */
-var geo = {
-    'latitude': null,
-    'longitude': null,
-    'accuracy': null
-};
+var geo = null;
 
 
 /**
@@ -151,13 +149,12 @@ var pairToSend = function(socket) {
 
     assert (selectedFile !== null);
 
-    socket.emit('send', {
+    socket.emit('pairToSend', {
         'id': id,
-        // TODO: geo-location is not passed at present
-        'geo': null,
+        'geo': geo,
         'fileInfo': selectedFile
     });
-    showMessage("Finding someone nearby to receive files.. [me]" + id);
+    showMessage("Finding someone to receive files.. [me]" + id);
 };
 
 
@@ -171,10 +168,9 @@ var pairToReceive = function(socket) {
         return;
     }
 
-    socket.emit('receive', {
+    socket.emit('pairToReceive', {
         'id': id,
-        // TODO: geo-location is not passed at present
-        'geo': null
+        'geo': geo
     });
     showMessage("Finding someone nearby to send files.. [me]" + id);
 };
@@ -284,9 +280,11 @@ var prepareToReceive = function(partnerID, fileName, fileSize) {
      */
     if (navigator.geolocation) {
         var onGeoSuccess = function(pos) {
-            geo.latitude = pos.coords.latitude;
-            geo.longitude = pos.coords.longitude;
-            geo.accuracy = pos.coords.accuracy;
+            geo = {
+                'latitude': pos.coords.latitude,
+                'longitude': pos.coords.longitude,
+                'accuracy': pos.coords.accuracy
+            };
         };
         var onGeoError = function(err) {
             var errors = {
