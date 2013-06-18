@@ -44,6 +44,22 @@ var selectedFile = null;
 var id = null;
 
 /**
+ * The latitude of the geo-location.
+ * @type {Number}
+ */
+var geoLatitude = null;
+/**
+ * The longitude of the geo-location.
+ * @type {Number}
+ */
+var geoLongitude = null;
+/**
+ * The accuracy of the geo-location.
+ * @type {Number}
+ */
+var geoAccuracy = null;
+
+/**
  * Is this page connected to server?
  * @type {Boolean}
  */
@@ -264,6 +280,28 @@ var prepareToReceive = function(partnerID, fileName, fileSize) {
     socket.on('send', function(data) {
         prepareToSend(data.partnerID, data.fileName, data.fileSize);
     });
+
+    /*
+     * Retrieve geo-location if possible.
+     */
+    if (navigator.geolocation) {
+        var onGeoSuccess = function(pos) {
+            geoLatitude = pos.coords.latitude;
+            geoLongitude = pos.coords.longitude;
+            geoAccuracy = pos.coords.accuracy;
+        };
+        var onGeoError = function(err) {
+            var errors = {
+                1: "Authorization fails",           // permission denied
+                2: "Can't detect your location",    //position unavailable
+                3: "Connection timeout"             // timeout
+            };
+            showMessage("Error retrieving GEO-LOCATION: " + errors[err.code]);
+        };
+        navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError, {
+            enableHighAccuracy: true
+        });
+    }
 
     sendButton.onclick = function() {
         pairToSend(socket);
