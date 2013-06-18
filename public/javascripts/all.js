@@ -275,6 +275,10 @@ var prepareToReceive = function(partnerID, fileName, fileSize) {
         prepareToSend(data.partnerID, data.fileName, data.fileSize);
     });
 
+    socket.on('pairFailed', function() {
+        showMessage("Failed making a pair. It seems nobody is nearby.");
+    });
+
     /*
      * Retrieve geo-location if possible.
      */

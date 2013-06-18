@@ -12,6 +12,13 @@ var socketID = 0;
 
 
 /**
+ * The timeout for making a pair. In milliseconds.
+ * @type {Number}
+ */
+var TIMEOUT = 1000;
+
+
+/**
  * Containing all the information of a user.
  */
 function UserData() {
@@ -170,7 +177,13 @@ var onPairToReceive = function(socket, receiveID, geo) {
     } else {
         // fails to pair
         toReceive[receiveID] = user;
-        // TODO: also add timeout control
+        setTimeout(function() {
+            if (receiveID in toReceive) {
+                var u = toReceive[receiveID];
+                u.socket.emit('pairFailed');
+                delete toReceive[receiveID];
+            }
+        }, TIMEOUT);
     }
 };
 
@@ -217,7 +230,13 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
     } else {
         // fails to pair
         toSend[sendID] = user;
-        // TODO: add timeout control
+        setTimeout(function() {
+            if (sendID in toSend) {
+                var u = toSend[sendID];
+                u.socket.emit('pairFailed');
+                delete toSend[sendID];
+            }
+        }, TIMEOUT);
     }
 };
 
