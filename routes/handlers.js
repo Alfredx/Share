@@ -5,33 +5,52 @@
 /**
  * The number used as a socket's id.
  * Also represents how many sockets have been used.
+ * Assigned starting from 1.
  * @type {Number}
  */
 var socketID = 0;
 
+
+/**
+ * Containing all the information of a user.
+ * @param {Object} socket   Socket object used in socket.io.
+ * @param {String} ip       *.*.*.*
+ * @param {Number} port     e.g. 80
+ * @param {Object} geo      TODO: update geo-info
+ * @param {String} fileName The name of the file user wants to send.
+ *                          Or null if user just want to receive.
+ * @param {Number} fileSize The size of the file user wants to send.
+ *                          Or null if user just want to receive.
+ */
+function UserData(socket, ip, port, geo, fileName, fileSize) {
+    this.socket = socket;
+    this.ip = ip;
+    this.port = port;
+    this.geo = geo;
+    this.fileName = fileName;
+    this.fileSize = fileSize;
+}
+
 /*
  * All users that are trying to send files.
- * 'user/socket id' => {
- *     'socket': socket,
- *     'ip': ip address,
- *     'port': port,
- *     'geo': geolocation,
- *     'fileName': fileName,
- *     'fileSize': fileSize
- * }
+ * 'user/socket id' => UserData
  */
 var toSend = {};
 
 /*
  * All users that are trying to receive files.
- * 'user/socket id' => {
- *     'socket': socket,
- *     'ip': ip address,
- *     'port': port,
- *     'geo': geolocation
- * }
+ * 'user/socket id' => UserData
  */
 var toReceive = {};
+
+
+/**
+ * All the connections that have been paired.
+ * 'oneID' => Connection
+ * 'anotherID' => SameConnection
+ * @type {Object}
+ */
+var paired = {};
 
 
 /**
@@ -55,125 +74,140 @@ var parsePort = function(socket) {
 
 
 /**
+ * Called when a user tries to receive files.
+ * @param  {Object} socket The  object used in socket.io.
+ * @param  {String} receiveID   The id for the user to receive.
+ * @param  {Object} geolocation TODO: to update here.
+ */
+var onTryReceive = function(socket, receiveID, geolocation) {
+    // TODO: geo-location is not used currently.
+    delete toSend[receiveID];
+    delete toReceive[receiveID];
+
+    var sendID = null;
+    for (var uid in toSend) {
+        // TODO: just pick one...
+        sendID = uid;
+        break;
+    }
+
+    if (sendID !== null) {
+        // successfully finds someone to pair
+        var partner = toSend[sendID];
+        partner.socket.emit('send', {
+            'partnerID': receiveID,
+            'fileName': partner.fileName,
+            'fileSize': partner.fileSize
+        });
+        socket.emit('receive', {
+            'partnerID': sendID,
+            'fileName': partner.fileName,
+            'fileSize': partner.fileSize
+        });
+        delete toSend[sendID];
+        // TODO: save into connection dict
+    } else {
+        // fails to pair
+        var user = new UserData();
+        user.socket = socket;
+        user.ip = parseAddress(socket);
+        user.port = parsePort(socket);
+        // TODO: also save geolocation data
+
+        toReceive[receiveID] = user;
+        // TODO: also add timeout control
+    }
+};
+
+
+/**
+ * Called when a user tries to send files.
+ * @param  {Object} socket      The object used in socket.io.
+ * @param  {String} sendID      The id for the user to send.
+ * @param  {Object} geolocation TODO: to update here.
+ * @param  {Object} fileInfo    A JSON object that contains name, type, size, lastModifiedDate.
+ */
+var onTrySend = function(socket, sendID, geolocation, fileInfo) {
+    delete toSend[sendID];
+    delete toReceive[sendID];
+
+    var receiveID = null;
+    for (var uid in toReceive) {
+        // just pick one...
+        receiveID = uid;
+        break;
+    }
+
+    if (receiveID !== null) {
+        // successfully finds someone to pair
+        var partner = toReceive[receiveID];
+        partner.socket.emit('receive', {
+            'partnerID': sendID,
+            'fileName': fileInfo.name,
+            'fileSize': fileInfo.size
+        });
+        socket.emit('send', {
+            'partnerID': receiveID,
+            'fileName': fileInfo.name,
+            'fileSize': fileInfo.size
+        });
+        delete toReceive[receiveID];
+        // TODO: save into connection dict
+    } else {
+        // fails to pair
+        var user = new UserData();
+        user.socket = socket;
+        user.ip = parseAddress(socket);
+        user.port = parsePort(socket);
+        user.fileName = fileInfo.name;
+        user.fileSize = fileInfo.size;
+        // TODO: also add geolocation data
+
+        toSend[sendID] = user;
+        // TODO: add timeout control
+    }
+};
+
+
+/**
  * Init the socket.
  * @param  {Object} socket The socket to init.
  */
 var initSocket = function(socket) {
     // assign id for this connection
     socketID++;
-    socket.emit('set_id', socketID);
+    var assignedID = socketID;
+    socket.emit('set_id', assignedID);
+    console.log('Socket connected.. [ID] ' + assignedID + ' assigned');
 
     /**
      * Remove relative data in toSend and toReceive dictionary when disconnected.
      */
-    socket.on('disconnect', (function(theID) {
-        // save this socket's id for the referrence when disconnected
-        return function() {
-            delete toSend[theID];
-            delete toReceive[theID];
-            console.log('Socket disconnected.. [ID] ' + theID);
-        };
-    })(socketID));
-
-    /**
-     * User tries to receive files.
-     * @param  {Number} receiveID The ID of the user to receive files.
-     */
-    socket.on('receive', function(data) {
-        var receiveID = data.id;
-        // TODO: geo-location is not used currently.
-        var geolocation = data.geo;
-
-        delete toSend[receiveID];
-        delete toReceive[receiveID];
-
-        var sendID = null;
-        for (var uid in toSend) {
-            // just pick one...
-            sendID = uid;
-            break;
-        }
-
-        if (sendID) {
-            // successfully finds someone to pair
-            var partner = toSend[sendID].socket;
-            var fileName = toSend[sendID].fileName;
-            var fileSize = toSend[sendID].fileSize;
-
-            partner.emit('send', {
-                'partnerID': receiveID,
-                'fileName': fileName,
-                'fileSize': fileSize
-            });
-            socket.emit('receive', {
-                'partnerID': sendID,
-                'fileName': fileName,
-                'fileSize': fileSize
-            });
-            delete toSend[sendID];
-        } else {
-            // fails to pair
-            var obj = {};
-            obj.socket = socket;
-            obj.ip = parseAddress(socket);
-            obj.port = parsePort(socket);
-            // TODO: also save geolocation data
-
-            toReceive[receiveID] = obj;
-            // TODO: also add timeout control
-        }
+    socket.on('disconnect', function() {
+        delete toSend[assignedID];
+        delete toReceive[assignedID];
+        console.log('Socket disconnected.. [ID] ' + assignedID);
     });
 
     /**
-     * User tries to send files.
-     * @param  {Object} data A JSON object that contains brief file info.
+     * User tries to pair to receive files.
+     */
+    socket.on('receive', function(data) {
+        onTryReceive(socket, data.id, data.geo);
+    });
+
+    /**
+     * User tries to pair to send files.
      */
     socket.on('send', function(data) {
-        var sendID = data.id;
-        var geolocation = data.geo;
-        /**
-         * A JSON object that contains name, type, size, lastModifiedDate
-         * @type {Object}
-         */
-        var fileInfo = data.fileInfo;
+        onTrySend(socket, data.id, data.geo, data.fileInfo);
+    });
 
-        delete toSend[sendID];
-        delete toReceive[sendID];
-
-        var receiveID = null;
-        for (var uid in toReceive) {
-            // just pick one...
-            receiveID = uid;
-            break;
-        }
-
-        if (receiveID) {
-            // successfully finds someone to pair
-            var partner = toReceive[receiveID].socket;
-            partner.emit('receive', {
-                'partnerID': sendID,
-                'fileName': fileInfo.name,
-                'fileSize': fileInfo.size
-            });
-            socket.emit('send', {
-                'partnerID': receiveID,
-                'fileName': fileInfo.name,
-                'fileSize': fileInfo.size
-            });
-            delete toReceive[receiveID];
-        } else {
-            // fails to pair
-            var obj = {};
-            obj.socket = socket;
-            obj.ip = parseAddress(socket);
-            obj.port = parsePort(socket);
-            obj.fileName = fileInfo.name;
-            obj.fileSize = fileInfo.size;
-            // TODO: also add geolocation data
-
-            toSend[sendID] = obj;
-            // TODO: add timeout control
-        }
+    /**
+     * After finding two users, they confirm the connection.
+     */
+    socket.on('confirm', function(data) {
+        // TODO: finish this
     });
 };
 
