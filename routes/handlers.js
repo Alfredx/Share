@@ -162,12 +162,12 @@ var onPairToReceive = function(socket, receiveID, geo) {
     var partner = pick(user, toSend);
     if (partner) {
         // successfully finds someone to pair
-        partner.socket.emit('send', {
+        partner.socket.emit('confirmSend', {
             'partnerID': user.id,
             'fileName': partner.fileName,
             'fileSize': partner.fileSize
         });
-        socket.emit('receive', {
+        socket.emit('confirmReceive', {
             'partnerID': partner.id,
             'fileName': partner.fileName,
             'fileSize': partner.fileSize
@@ -249,7 +249,7 @@ var initSocket = function(socket) {
     // assign id for this connection
     socketID++;
     var assignedID = socketID;
-    socket.emit('set_id', assignedID);
+    socket.emit('setID', assignedID);
     console.log('Socket connected.. [ID] ' + assignedID + ' assigned');
 
     /**

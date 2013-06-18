@@ -177,43 +177,42 @@ var pairToReceive = function(socket) {
 
 
 /**
- * After pairing succeeded, prepare to send files.
+ * After pairing succeeded, confirm to send files.
  * @param  {Number} partner The ID of the partner of this sharing.
  * @param  {String} fileName  The name of the file to send.
  * @param  {Number} fileSize  The size of the file to send.
  */
-var prepareToSend = function(partnerID, fileName, fileSize) {
+var confirmToSend = function(partnerID, fileName, fileSize) {
     var hint = "Confirm to send '" + fileName + "' " +
                "(" + xs.sizeToString(fileSize) + ") " +
                "to user " + partnerID;
     if (confirm(hint)) {
         // TODO: confirmed, send now
+        showMessage('Confirmed to send files to user ' + partnerID);
     } else {
         // not confirmed, tell the other user
+        showMessage('Disagree to send files to user ' + partnerID);
     }
-    showMessage('Prepare to send files to user ' + partnerID);
-    console.log("Matched with " + partnerID + ", prepare to send files");
 };
 
 
 /**
- * After pairing succeeded, prepare to receive files.
+ * After pairing succeeded, confirm to receive files.
  * @param  {Number} partner The ID of the partner of this sharing.
  * @param  {String} fileName  The name of the file to send.
  * @param  {Number} fileSize  The size of the file to send.
  */
-var prepareToReceive = function(partnerID, fileName, fileSize) {
+var confirmToReceive = function(partnerID, fileName, fileSize) {
     var hint = "Confirm to receive '" + fileName + "' " +
                "(" + xs.sizeToString(fileSize) + ") " +
                "from user " + partnerID;
     if (confirm(hint)) {
         // TODO: confirmed, receive now
+        showMessage('Confirmed to receive files from user ' + partnerID);
     } else {
         // not confirmed, tell the other user
+        showMessage('Disagreed to receive files from user ' + partnerID);
     }
-    // TODO: finish this method
-    showMessage('Prepare to receive files from user ' + partnerID);
-    console.log("Matched with " + partnerID + ", prepare to receive files");
 };
 
 
@@ -230,8 +229,8 @@ var prepareToReceive = function(partnerID, fileName, fileSize) {
         alert("Your browser doesn't support AJAX.");
         return;
     }
-
     // All APIs supported
+
     var socket = io.connect('/');
 
     socket.on('connecting', function() {
@@ -256,25 +255,34 @@ var prepareToReceive = function(partnerID, fileName, fileSize) {
         console.log('Error happened.. Why?');
     });
 
-    // The followings are self-defined events.
-
     /**
      * Set the unique id for this connection.
      * @param  {Number} data The ID to be set.
      */
-    socket.on('set_id', function(data) {
+    socket.on('setID', function(data) {
         id = data;
         showMessage('Connected, id is ' + data);
     });
 
-    socket.on('receive', function(data) {
-        prepareToReceive(data.partnerID, data.fileName, data.fileSize);
+    /**
+     * Successfully making a pair, confirm sending files to it?
+     * @param  {Object} data A JSON object that contains multiple info.
+     */
+    socket.on('confirmSend', function(data) {
+        confirmToSend(data.partnerID, data.fileName, data.fileSize);
     });
 
-    socket.on('send', function(data) {
-        prepareToSend(data.partnerID, data.fileName, data.fileSize);
+    /**
+     * Successfully making a pair, confirm receiving files from it?
+     * @param  {Object} data A JSON object that contains multiple info.
+     */
+    socket.on('confirmReceive', function(data) {
+        confirmToReceive(data.partnerID, data.fileName, data.fileSize);
     });
 
+    /**
+     * Failed making a pair.
+     */
     socket.on('pairFailed', function() {
         showMessage("Failed making a pair. It seems nobody is nearby.");
     });
