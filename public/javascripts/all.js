@@ -178,11 +178,12 @@ var pairToReceive = function(socket) {
 
 /**
  * After pairing succeeded, confirm to send files.
- * @param  {Number} partner The ID of the partner of this sharing.
+ * @param  {Object} socket    The socket used in socket.io.
+ * @param  {Number} partner   The ID of the partner of this sharing.
  * @param  {String} fileName  The name of the file to send.
  * @param  {Number} fileSize  The size of the file to send.
  */
-var confirmToSend = function(partnerID, fileName, fileSize) {
+var confirmToSend = function(socket, partnerID, fileName, fileSize) {
     var hint = "Confirm to send '" + fileName + "' " +
                "(" + xs.sizeToString(fileSize) + ") " +
                "to user " + partnerID;
@@ -191,18 +192,23 @@ var confirmToSend = function(partnerID, fileName, fileSize) {
         showMessage('Confirmed to send files to user ' + partnerID);
     } else {
         // not confirmed, tell the other user
-        showMessage('Disagree to send files to user ' + partnerID);
+        socket.emit('confirmFailed', {
+            'myID': id,
+            'partnerID': partnerID
+        });
+        showMessage('You chose not to send files to user ' + partnerID);
     }
 };
 
 
 /**
  * After pairing succeeded, confirm to receive files.
- * @param  {Number} partner The ID of the partner of this sharing.
+ * @param  {Object} socket    The socket used in socket.io.
+ * @param  {Number} partner   The ID of the partner of this sharing.
  * @param  {String} fileName  The name of the file to send.
  * @param  {Number} fileSize  The size of the file to send.
  */
-var confirmToReceive = function(partnerID, fileName, fileSize) {
+var confirmToReceive = function(socket, partnerID, fileName, fileSize) {
     var hint = "Confirm to receive '" + fileName + "' " +
                "(" + xs.sizeToString(fileSize) + ") " +
                "from user " + partnerID;
@@ -211,7 +217,11 @@ var confirmToReceive = function(partnerID, fileName, fileSize) {
         showMessage('Confirmed to receive files from user ' + partnerID);
     } else {
         // not confirmed, tell the other user
-        showMessage('Disagreed to receive files from user ' + partnerID);
+        socket.emit('confirmFailed', {
+            'myID': id,
+            'partnerID': partnerID
+        });
+        showMessage('You chose not to receive files from user ' + partnerID);
     }
 };
 
@@ -269,7 +279,7 @@ var confirmToReceive = function(partnerID, fileName, fileSize) {
      * @param  {Object} data A JSON object that contains multiple info.
      */
     socket.on('confirmSend', function(data) {
-        confirmToSend(data.partnerID, data.fileName, data.fileSize);
+        confirmToSend(socket, data.partnerID, data.fileName, data.fileSize);
     });
 
     /**
@@ -277,7 +287,7 @@ var confirmToReceive = function(partnerID, fileName, fileSize) {
      * @param  {Object} data A JSON object that contains multiple info.
      */
     socket.on('confirmReceive', function(data) {
-        confirmToReceive(data.partnerID, data.fileName, data.fileSize);
+        confirmToReceive(socket, data.partnerID, data.fileName, data.fileSize);
     });
 
     /**
@@ -285,6 +295,20 @@ var confirmToReceive = function(partnerID, fileName, fileSize) {
      */
     socket.on('pairFailed', function() {
         showMessage("Failed making a pair. It seems nobody is nearby.");
+    });
+
+    /**
+     * After successfully pairing, the sender chose not to confirm to send.
+     */
+    socket.on('betrayedSending', function(data) {
+        showMessage("User " + data.partnerID + " chose not to send files to you.");
+    });
+
+    /**
+     * After successfully pairing, the receiver chose not to confirm to receive.
+     */
+    socket.on('betrayedReceiving', function(data) {
+        showMessage("User " + data.partnerID + " chose not to receive files from you.");
     });
 
     /*

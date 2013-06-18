@@ -72,12 +72,6 @@ function UserData() {
      * @type {Number}
      */
     this.fileSize = null;
-
-    /**
-     * Whether user has confirmed connection.
-     * @type {Boolean}
-     */
-    this.confirmed = null;
 }
 
 /*
@@ -94,12 +88,90 @@ var toReceive = {};
 
 
 /**
- * All the connections that have been paired.
- * 'oneID' => Connection
- * 'anotherID' => SameConnection
+ * Containing the necessary for a paired connection.
+ */
+function Connection() {
+    /**
+     * The user that sends files.
+     * @type {Object}
+     */
+    this.sender = null;
+    /**
+     * Whether sender has confirmed to send.
+     * @type {Boolean}
+     */
+    this.senderConfirmed = false;
+    /**
+     * The user that receives files.
+     * @type {Object}
+     */
+    this.receiver = null;
+    /**
+     * Whether receiver has confirmd to receive.
+     * @type {Boolean}
+     */
+    this.receiverConfirmed = false;
+}
+
+
+/**
+ * Managing all the connections that have been paired.
  * @type {Object}
  */
-var paired = {};
+var paired = {
+    /**
+     * The data structure that stores all the connections.
+     * 'senderID' => Connection
+     * 'receiverID' => the same Connection
+     * @type {Object}
+     */
+    _connections: {},
+
+    /**
+     * Remove the connection relative to this user.
+     * @param  {Number} userID The ID of a user in connection.
+     */
+    clear: function(userID) {
+        if (!(userID in this._connections)) {
+            return;
+        }
+
+        var con = this._connections[userID];
+        var sender = con.sender;
+        var receiver = con.receiver;
+        if (userID === sender.id) {
+            // tell receiver
+            receiver.socket.emit('betrayedSending', {
+                'partnerID': sender.id
+            });
+        } else {
+            // tell sender
+            sender.socket.emit('betrayedReceiving', {
+                'partnerID': receiver.id
+            });
+        }
+
+        delete this._connections[sender.id];
+        delete this._connections[receiver.id];
+    },
+
+    /**
+     * Add a new connection after pairing.
+     * @param  {Object} sender   The user that sends files.
+     * @param  {Object} receiver The user that receives files.
+     */
+    add: function(sender, receiver) {
+        this.clear(sender.id);
+        this.clear(receiver.id);
+
+        var con = new Connection();
+        con.sender = sender;
+        con.receiver = receiver;
+
+        this._connections[sender.id] = con;
+        this._connections[receiver.id] = con;
+    }
+};
 
 
 /**
@@ -173,7 +245,9 @@ var onPairToReceive = function(socket, receiveID, geo) {
             'fileSize': partner.fileSize
         });
         delete toSend[partner.id];
-        // TODO: save into connection dict
+
+        // add into connection dict
+        paired.add(partner, user);
     } else {
         // fails to pair
         toReceive[receiveID] = user;
@@ -226,7 +300,9 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
             'fileSize': user.fileSize
         });
         delete toReceive[partner.id];
-        // TODO: save into connection dict
+
+        // add into connection dict
+        paired.add(user, partner);
     } else {
         // fails to pair
         toSend[sendID] = user;
@@ -273,6 +349,15 @@ var initSocket = function(socket) {
      */
     socket.on('pairToSend', function(data) {
         onPairToSend(socket, data.id, data.geo, data.fileInfo);
+    });
+
+    /**
+     * Pair has been made, but one user disagrees to share file with the other.
+     */
+    socket.on('confirmFailed', function(data) {
+        var myID = data.myID;
+        // var partnerID = data.partnerID;
+        paired.clear(myID);
     });
 
     /**
