@@ -266,6 +266,7 @@ var initSocket = function(socket) {
         con.receiver.socket.emit('uploadSuccess', {
         });
         // TODO:
+        paired.clear(con.id);
     });
 
     /**
@@ -276,6 +277,7 @@ var initSocket = function(socket) {
         con.receiver.socket.emit('uploadFailed', {
         });
         // TODO:
+        paired.clear(con.id);
     });
 };
 
@@ -343,6 +345,15 @@ exports.test = function(req, res) {
     var receives = toReceive.userIDs();
     results += receives.join(', ');
     results += newline;
+
+    results += "Connections: ";
+    results += newline;
+    var cons = paired.ids();
+    for (var idx in cons) {
+        var c = cons[idx];
+        results += "Connection " + c.connectionID + ": " + c.senderID + " => " + c.receiverID;
+        results += newline;
+    }
 
     res.send(200, results);
 };

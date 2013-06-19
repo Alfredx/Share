@@ -212,9 +212,10 @@ var Pairs = function() {
     /**
      * Remove the connection relative to this user.
      * @param  {Number}   conID    The ID of the connection.
-     * @param  {Number}   userID   The ID of the user who stops the connection.
+     * @param  {Number}   userID   The ID of the user who stops the connection. Optional.
      * @param  {Function} callback Will be called if the connection is still valid.
      *                             The other user will be passed in.
+     *                             Optional.
      */
     this.clear = function(conID, fromUserID, callback) {
         if (!(conID in this._connections)) {
@@ -225,12 +226,14 @@ var Pairs = function() {
         var sender = con.sender;
         var receiver = con.receiver;
 
-        if (fromUserID === sender.id) {
-            // from sender, tell receiver
-            callback(receiver);
-        } else {
-            // from receiver, tell sender
-            callback(sender);
+        if (fromUserID) {
+            if (fromUserID === sender.id) {
+                // from sender, tell receiver
+                callback(receiver);
+            } else {
+                // from receiver, tell sender
+                callback(sender);
+            }
         }
 
         delete this._connections[conID];
@@ -286,6 +289,28 @@ var Pairs = function() {
         }
 
         return con.senderConfirmed && con.receiverConfirmed;
+    };
+
+    /**
+     * For debugging, get all the ids of the connections.
+     * @return {Object} An array of objects.
+     */
+    this.ids = function() {
+        var outputs = [];
+        for (var conID in this._connections) {
+            var con = this._connections[conID];
+
+            var out = {};
+            out.connectionID = conID;
+            out.senderID = con.sender.id;
+            out.receiverID = con.receiver.id;
+            console.log(out.connectionID);
+            console.log(out.senderID);
+            console.log(out.receiverID);
+
+            outputs.push(out);
+        }
+        return outputs;
     };
 };
 
