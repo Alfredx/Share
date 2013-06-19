@@ -26,6 +26,8 @@ var outputField = document.getElementById('selectedList');
 // send or receive
 var sendButton = document.getElementById('sendButton');
 var receiveButton = document.getElementById('receiveButton');
+// progress bar for sharing
+var progressBar = document.getElementById('uploadProgress');
 
 
 /**
@@ -84,6 +86,8 @@ fileField.addEventListener('change', function(evt) {
             var prop = properties[i];
             selectedFile[prop] = f[prop];
         }
+        // save the File instance
+        selectedFile['handle'] = f;
 
         results = "";
         // for (var k in f) {
@@ -96,36 +100,6 @@ fileField.addEventListener('change', function(evt) {
     outputField.innerHTML = '<ul>' + output.join('') + "</ul>";
     sendButton.disabled = false;
 }, false);
-
-
-/**
- * User triggers a web request to connect and send files.
- * @param  {Object} socket The socket in socket.io.
- */
-var trySend = function(socket) {
-    // TODO: @deprecated, can be changed to: send file after pairing
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState !== 4) {
-            showMessage("ID: " + id + "; AJAX status: " + xhr.readyState);
-            return;
-        }
-        // Now it's ready
-        if (xhr.status === 200) {
-            showMessage(xhr.responseText);
-        } else {
-            showMessage("SOMEHOW FAILED: " + xhr.status);
-        }
-    };
-    // TODO: change to another url
-    xhr.open('POST', '/connect', true);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    ctx = {
-        // TODO: pass the connection id rather than the user id
-        'randomID': id
-    };
-    xhr.send(xs.encodeDict(ctx));
-};
 
 
 /**
@@ -195,7 +169,7 @@ var confirmToSend = function(socket, partnerID, fileName, fileSize, conID) {
             'myID': id,
             'partnerID': partnerID
         });
-        showMessage('Confirmed to send files to user ' + partnerID);
+        showMessage('Confirmed to send files to user ' + partnerID + ', waiting for his/her response..');
     } else {
         // not confirmed, tell the other user
         socket.emit('confirmFailed', {
@@ -227,7 +201,7 @@ var confirmToReceive = function(socket, partnerID, fileName, fileSize, conID) {
             'myID': id,
             'partnerID': partnerID
         });
-        showMessage('Confirmed to receive files from user ' + partnerID);
+        showMessage('Confirmed to receive files from user ' + partnerID + ', waiting for his/her response..');
     } else {
         // not confirmed, tell the other user
         socket.emit('confirmFailed', {
@@ -243,15 +217,54 @@ var confirmToReceive = function(socket, partnerID, fileName, fileSize, conID) {
 /**
  * Both users have confirmed, it's time to start sending.
  * @param  {Object} socket     The socket used in socket.io.
+ * @param  {Number} conID      The ID of the connection.
  * @param  {Number} senderID   The ID of the sender.
  * @param  {Number} receiverID The ID of the receiver.
  */
-var onStartSending = function(socket, senderID, receiverID) {
+var onStartSending = function(socket, conID, senderID, receiverID) {
     if (id === senderID) {
         // self is the sender
-        showMessage("Confirmed, it's time for me to send files!!!");
+        assert(selectedFile !== null);
 
-        // TODO: real start
+        // send files wrapped in a FormData using XHR2
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/upload?connectionID=' + conID, true);
+        xhr.onload = function(e) {
+            progressBar.hidden = true;
+            if (this.status === 200) {
+                showMessage("Uploading finished.");
+
+                socket.emit('uploadSuccess', {
+                    'connectionID': conID
+                });
+            } else {
+                showMessage("Error uploading?!");
+                console.log("ERROR uploading?");
+
+                socket.emit('uploadFailed', {
+                    'connectionID': conID
+                });
+            }
+        };
+
+        // update the progress bar while uploading
+        progressBar.hidden = false;
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                var percent = e.loaded / e.total;
+                progressBar.value = percent * 100;
+
+                socket.emit('uploadProgress', {
+                    'connectionID': conID,
+                    'progress': Math.round(percent * 100)
+                });
+            }
+        };
+
+        var fd = new FormData();
+        fd.append('uploadedFile', selectedFile['handle']);
+        xhr.send(fd);
+        showMessage("Confirmed, uploading now...");
     } else if (id === receiverID) {
         // self is the receiver
         showMessage("Confirmed, user " + senderID + " has started sending..");
@@ -366,7 +379,29 @@ var initGeolocation = function() {
      * Both users confirmed, it's time to start sending.
      */
     socket.on('startSending', function(data) {
-        onStartSending(socket, data.senderID, data.receiverID);
+        onStartSending(socket, data.connectionID, data.senderID, data.receiverID);
+    });
+
+    /**
+     * The sender has updated its uploading progress.
+     */
+    socket.on('uploadProgress', function(data) {
+        showMessage("Uploading " + data.progress + "%");
+    });
+
+    /**
+     * The sender has finished uploading.
+     */
+    socket.on('uploadSuccess', function(data) {
+        showMessage("Uploading finished!");
+        // TODO: it's time to download!
+    });
+
+    /**
+     * The uploading somehow failed..
+     */
+    socket.on('uploadFailed', function(data) {
+        showMessage("Uploading failed...");
     });
 
     /*

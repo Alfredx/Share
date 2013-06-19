@@ -17,13 +17,16 @@ app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.use(express.favicon());
 app.use(express.logger('dev'));
-app.use(express.bodyParser());
+app.use(express.bodyParser({
+    uploadDir: "./tmp"
+}));
 app.use(express.methodOverride());
 // randomly generated key
 app.use(express.cookieParser('H9Ehmin9oIDgMLGV'));
 app.use(express.session());
 app.use(app.router);
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, "tmp")));
 
 // development only
 if ('development' == app.get('env')) {
@@ -31,7 +34,7 @@ if ('development' == app.get('env')) {
 }
 
 app.get('/', handlers.index);
-app.post('/send', handlers.send);
+app.post('/upload', handlers.upload);
 // only for testing
 app.get('/test', handlers.test);
 

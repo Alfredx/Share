@@ -186,10 +186,12 @@ var onConfirmed = function(conID, userID) {
     var receiver = con.receiver;
 
     sender.socket.emit('startSending', {
+        'connectionID': conID,
         'senderID': sender.id,
         'receiverID': receiver.id
     });
     receiver.socket.emit('startSending', {
+        'connectionID': conID,
         'senderID': sender.id,
         'receiverID': receiver.id
     });
@@ -244,6 +246,37 @@ var initSocket = function(socket) {
     socket.on('confirmed', function(data) {
         onConfirmed(data.connectionID, data.myID);
     });
+
+    /**
+     * Uploading progress updated.
+     */
+    socket.on('uploadProgress', function(data) {
+        var con = paired.get(data.connectionID);
+        var percent = data.progress;
+        con.receiver.socket.emit('uploadProgress', {
+            'progress': percent
+        });
+    });
+
+    /**
+     * Uploading has finished, it's time for downloading.
+     */
+    socket.on('uploadSuccess', function(data) {
+        var con = paired.get(data.connectionID);
+        con.receiver.socket.emit('uploadSuccess', {
+        });
+        // TODO:
+    });
+
+    /**
+     * Uploading failed, clear this connection.
+     */
+    socket.on('uploadFailed', function(data) {
+        var con = paired.get(data.connectionID);
+        con.receiver.socket.emit('uploadFailed', {
+        });
+        // TODO:
+    });
 };
 
 /**
@@ -276,17 +309,23 @@ exports.index = function(req, res){
 };
 
 
-// TODO: req.body.* => get the post data from request.
-
-
 /**
- * Handling the send file request.
- * @param  {Object} req
- * @param  {Object} res
+ * Handling the AJAX request for uploading files to send.
+ * @param  {Object} req The Request.
+ * @param  {Object} res The Response.
  */
-exports.send = function(req, res) {
-    // TODO: may be used to save the upload file into tmp files
-    res.send("Uploaded?!");
+exports.upload = function(req, res) {
+    var conID = req.query.connectionID;
+    if (!conID) {
+        res.send(400, 'Need to specify connection ID');
+        return;
+    }
+
+    var f = req.files.uploadedFile;
+    console.log(f);
+    // TODO: tell the receiver to download this file.
+
+    res.send(200);
 };
 
 
