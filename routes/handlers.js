@@ -259,24 +259,12 @@ var initSocket = function(socket) {
     });
 
     /**
-     * Uploading has finished, it's time for downloading.
-     */
-    socket.on('uploadSuccess', function(data) {
-        var con = paired.get(data.connectionID);
-        con.receiver.socket.emit('uploadSuccess', {
-        });
-        // TODO:
-        paired.clear(con.id);
-    });
-
-    /**
      * Uploading failed, clear this connection.
      */
     socket.on('uploadFailed', function(data) {
         var con = paired.get(data.connectionID);
         con.receiver.socket.emit('uploadFailed', {
         });
-        // TODO:
         paired.clear(con.id);
     });
 };
@@ -323,11 +311,36 @@ exports.upload = function(req, res) {
         return;
     }
 
-    var f = req.files.uploadedFile;
-    console.log(f);
-    // TODO: tell the receiver to download this file.
+    var con = paired.get(conID);
 
+    var f = req.files.uploadedFile;
+    var url = '/download?path=' + encodeURIComponent(f.path) +
+              '&name=' + encodeURIComponent(con.sender.fileName);
+
+    con.receiver.socket.emit('uploadSuccess', {
+        'fileURL': url
+    });
+
+    paired.clear(conID);
     res.send(200);
+};
+
+
+/**
+ * Handling the request to download a file.
+ * @param  {Object} req The Reuqest.
+ * @param  {Object} res The Response.
+ */
+exports.download = function(req, res) {
+    var path = req.query.path;
+    var name = req.query.name;
+    if (!path || !name) {
+        res.send(400, 'Invalid URL params.');
+        return;
+    }
+
+    // TODO: the default fileName will not be reader in Chinese and other characters.
+    res.download(path, name);
 };
 
 

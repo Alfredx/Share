@@ -28,6 +28,8 @@ var sendButton = document.getElementById('sendButton');
 var receiveButton = document.getElementById('receiveButton');
 // progress bar for sharing
 var progressBar = document.getElementById('uploadProgress');
+// the <a> for downloading
+var downloadLink = document.getElementById('downloadLink');
 
 
 /**
@@ -233,17 +235,9 @@ var onStartSending = function(socket, conID, senderID, receiverID) {
             progressBar.hidden = true;
             if (this.status === 200) {
                 showMessage("Uploading finished.");
-
-                socket.emit('uploadSuccess', {
-                    'connectionID': conID
-                });
             } else {
                 showMessage("Error uploading?!");
                 console.log("ERROR uploading?");
-
-                socket.emit('uploadFailed', {
-                    'connectionID': conID
-                });
             }
         };
 
@@ -393,8 +387,10 @@ var initGeolocation = function() {
      * The sender has finished uploading.
      */
     socket.on('uploadSuccess', function(data) {
-        showMessage("Uploading finished!");
-        // TODO: it's time to download!
+        showMessage("Ready to receive!");
+
+        downloadLink.href = data.fileURL;
+        downloadLink.click();
     });
 
     /**
