@@ -182,14 +182,16 @@ var pairToReceive = function(socket) {
  * @param  {Number} partner   The ID of the partner of this sharing.
  * @param  {String} fileName  The name of the file to send.
  * @param  {Number} fileSize  The size of the file to send.
+ * @param  {Number} conID     The ID of the connection.
  */
-var confirmToSend = function(socket, partnerID, fileName, fileSize) {
+var confirmToSend = function(socket, partnerID, fileName, fileSize, conID) {
     var hint = "Confirm to send '" + fileName + "' " +
                "(" + xs.sizeToString(fileSize) + ") " +
                "to user " + partnerID;
     if (confirm(hint)) {
         // confirmed, ready for sending
-        socket.emit('confirm', {
+        socket.emit('confirmed', {
+            'connectionID': conID,
             'myID': id,
             'partnerID': partnerID
         });
@@ -197,6 +199,7 @@ var confirmToSend = function(socket, partnerID, fileName, fileSize) {
     } else {
         // not confirmed, tell the other user
         socket.emit('confirmFailed', {
+            'connectionID': conID,
             'myID': id,
             'partnerID': partnerID
         });
@@ -211,14 +214,16 @@ var confirmToSend = function(socket, partnerID, fileName, fileSize) {
  * @param  {Number} partner   The ID of the partner of this sharing.
  * @param  {String} fileName  The name of the file to send.
  * @param  {Number} fileSize  The size of the file to send.
+ * @param  {Number} conID     The ID of the connection.
  */
-var confirmToReceive = function(socket, partnerID, fileName, fileSize) {
+var confirmToReceive = function(socket, partnerID, fileName, fileSize, conID) {
     var hint = "Confirm to receive '" + fileName + "' " +
                "(" + xs.sizeToString(fileSize) + ") " +
                "from user " + partnerID;
     if (confirm(hint)) {
         // confirmed, ready for receiving
-        socket.emit('confirm', {
+        socket.emit('confirmed', {
+            'connectionID': conID,
             'myID': id,
             'partnerID': partnerID
         });
@@ -226,6 +231,7 @@ var confirmToReceive = function(socket, partnerID, fileName, fileSize) {
     } else {
         // not confirmed, tell the other user
         socket.emit('confirmFailed', {
+            'connectionID': conID,
             'myID': id,
             'partnerID': partnerID
         });
@@ -243,6 +249,7 @@ var onStartSending = function(senderID, receiverID) {
     if (id === senderID) {
         // self is the sender
         showMessage("Confirmed, it's time for me to send files!!!");
+
         // TODO: real start
     } else if (id === receiverID) {
         // self is the receiver
@@ -304,7 +311,7 @@ var onStartSending = function(senderID, receiverID) {
      * @param  {Object} data A JSON object that contains multiple info.
      */
     socket.on('confirmSend', function(data) {
-        confirmToSend(socket, data.partnerID, data.fileName, data.fileSize);
+        confirmToSend(socket, data.partnerID, data.fileName, data.fileSize, data.connectionID);
     });
 
     /**
@@ -312,7 +319,7 @@ var onStartSending = function(senderID, receiverID) {
      * @param  {Object} data A JSON object that contains multiple info.
      */
     socket.on('confirmReceive', function(data) {
-        confirmToReceive(socket, data.partnerID, data.fileName, data.fileSize);
+        confirmToReceive(socket, data.partnerID, data.fileName, data.fileSize, data.connectionID);
     });
 
     /**
@@ -323,17 +330,10 @@ var onStartSending = function(senderID, receiverID) {
     });
 
     /**
-     * After successfully pairing, the sender chose not to confirm to send.
+     * After successfully pairing, the partner chose not to share.
      */
-    socket.on('betrayedSending', function(data) {
-        showMessage("User " + data.partnerID + " chose not to send files to you.");
-    });
-
-    /**
-     * After successfully pairing, the receiver chose not to confirm to receive.
-     */
-    socket.on('betrayedReceiving', function(data) {
-        showMessage("User " + data.partnerID + " chose not to receive files from you.");
+    socket.on('betrayed', function(data) {
+        showMessage("Your partner (User " + data.partnerID + ") chose not to share files with you..");
     });
 
     /**

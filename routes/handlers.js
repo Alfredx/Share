@@ -79,21 +79,23 @@ var onPairToReceive = function(socket, receiveID, geo) {
 
     var partner = toSend.pickUpon(user);
     if (partner) {
-        // successfully finds someone to pair
+        // successfully finds someone to pair, add into connection dict
+        var conID = paired.add(partner, user);
+
         partner.socket.emit('confirmSend', {
+            'connectionID': conID,
             'partnerID': user.id,
             'fileName': partner.fileName,
             'fileSize': partner.fileSize
         });
         socket.emit('confirmReceive', {
+            'connectionID': conID,
             'partnerID': partner.id,
             'fileName': partner.fileName,
             'fileSize': partner.fileSize
         });
-        toSend.clear(partner.id);
 
-        // add into connection dict
-        paired.add(partner, user);
+        toSend.clear(partner.id);
     } else {
         // fails to pair
         toReceive.addTillExpire(user, function(u) {
@@ -129,27 +131,68 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
 
     var partner = toReceive.pickUpon(user);
     if (partner) {
-        // successfully finds someone to pair
-        partner.socket.emit('receive', {
+        // successfully finds someone to pair, add into connection dict
+        var conID = paired.add(user, partner);
+
+        partner.socket.emit('confirmReceive', {
+            'connectionID': conID,
             'partnerID': user.id,
             'fileName': user.fileName,
             'fileSize': user.fileSize
         });
-        socket.emit('send', {
+        socket.emit('confirmSend', {
+            'connectionID': conID,
             'partnerID': partner.id,
             'fileName': user.fileName,
             'fileSize': user.fileSize
         });
-        toReceive.clear(partner.id);
 
-        // add into connection dict
-        paired.add(user, partner);
+        toReceive.clear(partner.id);
     } else {
         // fails to pair
         toSend.addTillExpire(user, function(u) {
             u.socket.emit('pairFailed');
         });
     }
+};
+
+
+/**
+ * Pair has been made, but one user disagrees to share file with the other.
+ * @param  {Number} conID      The ID of the connection.
+ * @param  {Number} fromUserID The ID of the user that disagrees.
+ */
+var onConfirmFailed = function(conID, fromUserID) {
+    paired.clear(conID, fromUserID, function(u) {
+        // u is the partner
+        u.socket.emit('betrayed', {
+            'partnerID': fromUserID
+        });
+    });
+};
+
+
+/**
+ * One use confirmed the connection after the pair being made.
+ */
+var onConfirmed = function(conID, userID) {
+    if (!paired.confirm(conID, userID)) {
+        return;
+    }
+    // both confirmed
+    var con = paired.get(conID);
+    var sender = con.sender;
+    var receiver = con.receiver;
+
+    sender.socket.emit('startSending', {
+        'senderID': sender.id,
+        'receiverID': receiver.id
+    });
+    receiver.socket.emit('startSending', {
+        'senderID': sender.id,
+        'receiverID': receiver.id
+    });
+    con.status = "SENDING";
 };
 
 
@@ -191,20 +234,14 @@ var initSocket = function(socket) {
      * Pair has been made, but one user disagrees to share file with the other.
      */
     socket.on('confirmFailed', function(data) {
-        var myID = data.myID;
-        paired.clear(myID, function(u) {
-            // u is the partner
-            u.socket.emit('betrayed', {
-                'partnerID': myID
-            });
-        });
+        onConfirmFailed(data.connectionID, data.myID);
     });
 
     /**
      * After finding two users, they confirm the connection.
      */
-    socket.on('confirm', function(data) {
-        paired.confirm(data.myID, data.partnerID);
+    socket.on('confirmed', function(data) {
+        onConfirmed(data.connectionID, data.myID);
     });
 };
 

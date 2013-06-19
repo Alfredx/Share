@@ -60,12 +60,6 @@ var UserData = function() {
 
 
 /**
- * The timeout for making a pair. In milliseconds.
- * @type {Number}
- */
-var TIMEOUT = 1500;
-
-/**
  * A data structure that stores users.
  * Expecially for saving users that are waiting to be paired.
  */
@@ -84,6 +78,12 @@ var Users = function() {
     this.clear = function(userID) {
         delete this._store[userID];
     };
+
+    /**
+     * The timeout for making a pair. In milliseconds.
+     * @type {Number}
+     */
+    var TIMEOUT = 1500;
 
     /**
      * Add the user into this store for TIMEOUT milliseconds.
@@ -132,6 +132,12 @@ var Users = function() {
  */
 var Connection = function() {
     /**
+     * The identifier for this connection.
+     * @type {Number}
+     */
+    this.id = null;
+
+    /**
      * The user that sends files.
      * @type {Object}
      */
@@ -170,94 +176,116 @@ var Connection = function() {
  */
 var Pairs = function() {
     /**
+     * Increase each time a new connection is established.
+     * @type {Number}
+     */
+    var connectionID = 0;
+    this._nextID = function() {
+        connectionID++;
+        return connectionID;
+    };
+
+    /**
      * The data structure that stores all the connections.
-     * 'senderID' => Connection
-     * 'receiverID' => the same Connection
+     * 'connection ID' => Connection
      * @type {Object}
      */
     this._connections = {};
 
     /**
+     * Get the connection by its id.
+     * @param  {Number} conID The ID of the connection to get.
+     * @return {Object}       The Connection object.
+     */
+    this.get = function(conID) {
+        return this._connections[conID];
+    };
+
+    /**
+     * Help speed up the search of connections from users' IDs.
+     * 'senderID / receiverID' => its connection id
+     * NOTE: not used yet..
+     * @type {Object}
+     */
+    this._indices = {};
+
+    /**
      * Remove the connection relative to this user.
-     * @param  {Number}   userID   The ID of a user in connection.
+     * @param  {Number}   conID    The ID of the connection.
+     * @param  {Number}   userID   The ID of the user who stops the connection.
      * @param  {Function} callback Will be called if the connection is still valid.
      *                             The other user will be passed in.
      */
-    this.clear = function(userID, callback) {
-        if (!(userID in this._connections)) {
+    this.clear = function(conID, fromUserID, callback) {
+        if (!(conID in this._connections)) {
             return;
         }
 
-        var con = this._connections[userID];
+        var con = this._connections[conID];
         var sender = con.sender;
         var receiver = con.receiver;
-        if (userID === sender.id) {
-            // tell receiver
+
+        if (fromUserID === sender.id) {
+            // from sender, tell receiver
             callback(receiver);
         } else {
-            // tell sender
+            // from receiver, tell sender
             callback(sender);
         }
 
-        delete this._connections[sender.id];
-        delete this._connections[receiver.id];
+        delete this._connections[conID];
+        delete this._indices[sender.id];
+        delete this._indices[receiver.id];
     };
 
     /**
      * Add a new connection after pairing.
      * @param  {Object} sender   The user that sends files.
      * @param  {Object} receiver The user that receives files.
-     * @return {String}          The connection's id.
+     * @return {Number}          The connection's id.
      */
     this.add = function(sender, receiver) {
-        this.clear(sender.id);
-        this.clear(receiver.id);
+        var conID = this._nextID();
 
         var con = new Connection();
+        con.id = conID;
         con.sender = sender;
         con.receiver = receiver;
 
-        this._connections[sender.id] = con;
-        this._connections[receiver.id] = con;
+        delete this._indices[sender.id];
+        delete this._indices[receiver.id];
 
-        // TODO: return this connection's id.
-        return 0;
+        this._connections[conID] = con;
+        this._indices[sender.id] = conID;
+        this._indices[receiver.id] = conID;
+
+        return conID;
     };
 
     /**
      * A user confirms to share files.
-     * @param  {Number} myID      The ID of the user that confirms.
-     * @param  {Number} partnerID The ID of the other user.
+     * @param  {Number} conID  The ID of the connection.
+     * @param  {Number} userID The ID of the user that confirms.
+     * @return {Boolean}       Whether both users have confirmed.
      */
-    this.confirm = function(myID, partnerID) {
-        if (!(myID in this._connections) || !(partnerID in this._connections)) {
-            return;
+    this.confirm = function(conID, userID) {
+        if (!(conID in this._connections)) {
+            return false;
         }
 
-        var con = this._connections[myID];
+        var con = this._connections[conID];
         var sender = con.sender;
         var receiver = con.receiver;
 
-        if (sender.id === myID) {
-            // this user is the sender
+        if (sender.id === userID) {
+            // is the sender
             con.senderConfirmed = true;
         } else {
-            // this user is the receiver
+            // is the receiver
             con.receiverConfirmed = true;
         }
 
-        if (con.senderConfirmed && con.receiverConfirmed) {
-            // both confirmed, real start
-            sender.socket.emit('startSending', {
-                'senderID': sender.id,
-                'receiverID': receiver.id
-            });
-            receiver.socket.emit('startSending', {
-                'senderID': sender.id,
-                'receiverID': receiver.id
-            });
-            con.status = "SENDING";
-        }
+        return con.senderConfirmed && con.receiverConfirmed;
     };
 };
 
