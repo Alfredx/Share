@@ -15,7 +15,7 @@ var socketID = 0;
  * The timeout for making a pair. In milliseconds.
  * @type {Number}
  */
-var TIMEOUT = 1000;
+var TIMEOUT = 1500;
 
 
 /**
@@ -74,17 +74,76 @@ function UserData() {
     this.fileSize = null;
 }
 
-/*
- * All users that are trying to send files.
- * 'user/socket id' => UserData
+
+/**
+ * Saving all the users that are waiting to be paired.
  */
-var toSend = {};
+function Users() {
+    /**
+     * Storing all the users.
+     * 'user/socket id' => UserData
+     * @type {Object}
+     */
+    this._store = {};
+
+    /**
+     * Remove the user's data in store.
+     * @param  {Number} userID The ID of the user to be removed.
+     */
+    this.clear = function(userID) {
+        delete this._store[userID];
+    };
+
+    /**
+     * Add the user into this store for TIMEOUT milliseconds.
+     * After it expires, it will be deleted and the callback will be called.
+     * @param  {Object} user       The user to be added.
+     * @param  {Function} callback To be called when it expires. The user will be passed.
+     */
+    this.addTillExpire = function(user, callback) {
+        this._store[user.id] = user;
+
+        var theID = user.id;
+        var store = this._store;
+        setTimeout(function() {
+            if (theID in store) {
+                var u = store[theID];
+                callback(u);
+                delete store[theID];
+            }
+        }, TIMEOUT);
+    };
+
+    /**
+     * Given a baseUser, find the nearest user.
+     * @param  {Object} baseUser The user to be compared.
+     * @return {Object}          The nearest user.
+     */
+    this.pickUpon = function(baseUser) {
+        for (var uid in this._store) {
+            // TODO: just pick one...
+            return this._store[uid];
+        }
+    };
+
+    /**
+     * Get all the users' IDs.
+     * @return {Object} An array of the ids.
+     */
+    this.userIDs = function() {
+        return Object.keys(this._store);
+    };
+}
+
 
 /*
- * All users that are trying to receive files.
- * 'user/socket id' => UserData
+ * All users that are trying to send files.
  */
-var toReceive = {};
+var toSend = new Users();
+/*
+ * All users that are trying to receive files.
+ */
+var toReceive = new Users();
 
 
 /**
@@ -240,28 +299,14 @@ var parsePort = function(socket) {
 
 
 /**
- * Given a baseUser, find the nearest user in targetUsers.
- * @param  {Object} baseUser    To find the person nearest to this user. UserData type.
- * @param  {Object} targetUsers All available users, 'user/socket id' => UserData.
- * @return {Object}             The nearest user.
- */
-var pick = function(baseUser, targetUsers) {
-    for (var uid in targetUsers) {
-        // TODO: just pick one...
-        return targetUsers[uid];
-    }
-};
-
-
-/**
  * Called when a user tries to receive files.
  * @param  {Object} socket The  object used in socket.io.
  * @param  {String} receiveID   The id for the user to receive.
  * @param  {Object} geo         Null or A JSON object that contains latitude, longitude and accuracy.
  */
 var onPairToReceive = function(socket, receiveID, geo) {
-    delete toSend[receiveID];
-    delete toReceive[receiveID];
+    toSend.clear(receiveID);
+    toReceive.clear(receiveID);
 
     // TODO: what if the user has connected and waited for sharing's completion.
 
@@ -276,7 +321,7 @@ var onPairToReceive = function(socket, receiveID, geo) {
         user.geoAccuracy = geo.accuracy;
     }
 
-    var partner = pick(user, toSend);
+    var partner = toSend.pickUpon(user);
     if (partner) {
         // successfully finds someone to pair
         partner.socket.emit('confirmSend', {
@@ -289,20 +334,15 @@ var onPairToReceive = function(socket, receiveID, geo) {
             'fileName': partner.fileName,
             'fileSize': partner.fileSize
         });
-        delete toSend[partner.id];
+        toSend.clear(partner.id);
 
         // add into connection dict
         paired.add(partner, user);
     } else {
         // fails to pair
-        toReceive[receiveID] = user;
-        setTimeout(function() {
-            if (receiveID in toReceive) {
-                var u = toReceive[receiveID];
-                u.socket.emit('pairFailed');
-                delete toReceive[receiveID];
-            }
-        }, TIMEOUT);
+        toReceive.addTillExpire(user, function(u) {
+            u.socket.emit('pairFailed');
+        });
     }
 };
 
@@ -315,8 +355,8 @@ var onPairToReceive = function(socket, receiveID, geo) {
  * @param  {Object} fileInfo A JSON object that contains name, type, size, lastModifiedDate.
  */
 var onPairToSend = function(socket, sendID, geo, fileInfo) {
-    delete toSend[sendID];
-    delete toReceive[sendID];
+    toSend.clear(sendID);
+    toReceive.clear(sendID);
 
     var user = new UserData();
     user.id = sendID;
@@ -331,7 +371,7 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
         user.geoAccuracy = geo.accuracy;
     }
 
-    var partner = pick(user, toReceive);
+    var partner = toReceive.pickUpon(user);
     if (partner) {
         // successfully finds someone to pair
         partner.socket.emit('receive', {
@@ -344,20 +384,15 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
             'fileName': user.fileName,
             'fileSize': user.fileSize
         });
-        delete toReceive[partner.id];
+        toReceive.clear(partner.id);
 
         // add into connection dict
         paired.add(user, partner);
     } else {
         // fails to pair
-        toSend[sendID] = user;
-        setTimeout(function() {
-            if (sendID in toSend) {
-                var u = toSend[sendID];
-                u.socket.emit('pairFailed');
-                delete toSend[sendID];
-            }
-        }, TIMEOUT);
+        toSend.addTillExpire(user, function(u) {
+            u.socket.emit('pairFailed');
+        });
     }
 };
 
@@ -371,15 +406,15 @@ var initSocket = function(socket) {
     socketID++;
     var assignedID = socketID;
     socket.emit('setID', assignedID);
-    console.log('Socket connected.. [ID] ' + assignedID + ' assigned');
+    console.log('New user connected.. [ID] ' + assignedID + ' assigned');
 
     /**
      * Remove relative data in toSend and toReceive dictionary when disconnected.
      */
     socket.on('disconnect', function() {
-        delete toSend[assignedID];
-        delete toReceive[assignedID];
-        console.log('Socket disconnected.. [ID] ' + assignedID);
+        toSend.clear(assignedID);
+        toReceive.clear(assignedID);
+        console.log('User disconnected.. [ID] ' + assignedID);
     });
 
     /**
@@ -437,7 +472,7 @@ exports.index = function(req, res){
     }
 
     var ctx = {
-        title: 'Send or Receive ' + times
+        title: 'Send or Receive '
     };
     res.render('all', ctx);
 };
@@ -460,21 +495,15 @@ exports.send = function(req, res) {
 exports.test = function(req, res) {
     var newline = '<br/>';
 
-    results = "To Send: ";
+    var results = "To Send: ";
     results += newline;
-    sends = [];
-    for (var u1 in toSend) {
-        sends.push(u1);
-    }
+    var sends = toSend.userIDs();
     results += sends.join(', ');
     results += newline;
 
     results += "To Receive: ";
     results += newline;
-    receives = [];
-    for (var u2 in toReceive) {
-        receives.push(u2);
-    }
+    var receives = toReceive.userIDs();
     results += receives.join(', ');
     results += newline;
 
