@@ -242,10 +242,11 @@ var confirmToReceive = function(socket, partnerID, fileName, fileSize, conID) {
 
 /**
  * Both users have confirmed, it's time to start sending.
+ * @param  {Object} socket     The socket used in socket.io.
  * @param  {Number} senderID   The ID of the sender.
  * @param  {Number} receiverID The ID of the receiver.
  */
-var onStartSending = function(senderID, receiverID) {
+var onStartSending = function(socket, senderID, receiverID) {
     if (id === senderID) {
         // self is the sender
         showMessage("Confirmed, it's time for me to send files!!!");
@@ -255,6 +256,31 @@ var onStartSending = function(senderID, receiverID) {
         // self is the receiver
         showMessage("Confirmed, user " + senderID + " has started sending..");
     }
+};
+
+
+/**
+ * Init and save the geolocation data.
+ */
+var initGeolocation = function() {
+    var onSuccess = function(pos) {
+        geo = {
+            'latitude': pos.coords.latitude,
+            'longitude': pos.coords.longitude,
+            'accuracy': pos.coords.accuracy
+        };
+    };
+    var onError = function(err) {
+        var errors = {
+            1: "Authorization fails",           // permission denied
+            2: "Can't detect your location",    // position unavailable
+            3: "Connection timeout"             // timeout
+        };
+        showMessage("Error retrieving GEO-LOCATION: " + errors[err.code]);
+    };
+    navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+        enableHighAccuracy: true
+    });
 };
 
 
@@ -340,31 +366,14 @@ var onStartSending = function(senderID, receiverID) {
      * Both users confirmed, it's time to start sending.
      */
     socket.on('startSending', function(data) {
-        onStartSending(data.senderID, data.receiverID);
+        onStartSending(socket, data.senderID, data.receiverID);
     });
 
     /*
      * Retrieve geo-location if possible.
      */
     if (navigator.geolocation) {
-        var onGeoSuccess = function(pos) {
-            geo = {
-                'latitude': pos.coords.latitude,
-                'longitude': pos.coords.longitude,
-                'accuracy': pos.coords.accuracy
-            };
-        };
-        var onGeoError = function(err) {
-            var errors = {
-                1: "Authorization fails",           // permission denied
-                2: "Can't detect your location",    //position unavailable
-                3: "Connection timeout"             // timeout
-            };
-            showMessage("Error retrieving GEO-LOCATION: " + errors[err.code]);
-        };
-        navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError, {
-            enableHighAccuracy: true
-        });
+        initGeolocation();
     }
 
     sendButton.onclick = function() {

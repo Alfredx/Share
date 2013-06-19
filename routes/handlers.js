@@ -179,6 +179,7 @@ var onConfirmed = function(conID, userID) {
     if (!paired.confirm(conID, userID)) {
         return;
     }
+
     // both confirmed
     var con = paired.get(conID);
     var sender = con.sender;
