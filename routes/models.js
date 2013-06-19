@@ -179,9 +179,11 @@ var Pairs = function() {
 
     /**
      * Remove the connection relative to this user.
-     * @param  {Number} userID The ID of a user in connection.
+     * @param  {Number}   userID   The ID of a user in connection.
+     * @param  {Function} callback Will be called if the connection is still valid.
+     *                             The other user will be passed in.
      */
-    this.clear = function(userID) {
+    this.clear = function(userID, callback) {
         if (!(userID in this._connections)) {
             return;
         }
@@ -189,17 +191,12 @@ var Pairs = function() {
         var con = this._connections[userID];
         var sender = con.sender;
         var receiver = con.receiver;
-        // TODO: remove the socket thing.
         if (userID === sender.id) {
             // tell receiver
-            receiver.socket.emit('betrayedSending', {
-                'partnerID': sender.id
-            });
+            callback(receiver);
         } else {
             // tell sender
-            sender.socket.emit('betrayedReceiving', {
-                'partnerID': receiver.id
-            });
+            callback(sender);
         }
 
         delete this._connections[sender.id];
@@ -210,6 +207,7 @@ var Pairs = function() {
      * Add a new connection after pairing.
      * @param  {Object} sender   The user that sends files.
      * @param  {Object} receiver The user that receives files.
+     * @return {String}          The connection's id.
      */
     this.add = function(sender, receiver) {
         this.clear(sender.id);
@@ -221,6 +219,9 @@ var Pairs = function() {
 
         this._connections[sender.id] = con;
         this._connections[receiver.id] = con;
+
+        // TODO: return this connection's id.
+        return 0;
     };
 
     /**

@@ -192,8 +192,12 @@ var initSocket = function(socket) {
      */
     socket.on('confirmFailed', function(data) {
         var myID = data.myID;
-        // var partnerID = data.partnerID;
-        paired.clear(myID);
+        paired.clear(myID, function(u) {
+            // u is the partner
+            u.socket.emit('betrayed', {
+                'partnerID': myID
+            });
+        });
     });
 
     /**
