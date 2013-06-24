@@ -1,4 +1,4 @@
-XShare
+Share
 ======
 
 A new way to share between devices.

@@ -1,5 +1,5 @@
 /*
- * All the handlers used in xshare.
+ * All the handlers used in Share.
  */
 
 var models = require('./models');

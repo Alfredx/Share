@@ -2,15 +2,15 @@
  * Providing some useful functions for the whole project.
  */
 
-// xshare
-var xs = xs || {};
+// Share
+var sh = sh || {};
 
 /**
  * Encode the dictionary into a valid url string.
  * @param  {Object} dict Just a dictionary containing some properties   .
  * @return {String}      Encoded url string. (No '?' in the front)
  */
-xs.encodeDict = function(dict) {
+sh.encodeDict = function(dict) {
     var strs = [];
     for (var k in dict) {
         strs.push(encodeURIComponent(k) + '=' + encodeURIComponent(dict[k]));
@@ -24,7 +24,7 @@ xs.encodeDict = function(dict) {
  * @param  {Number} len The length of generated key. Default to 16
  * @return {String}     The generated key.
  */
-xs.randomKey = function(len) {
+sh.randomKey = function(len) {
     var src = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + '0123456789';
     var cs = [];
 
@@ -44,7 +44,7 @@ xs.randomKey = function(len) {
  * @param  {Boolean} predication The expression expected to be true.
  * @param  {String} errorMessage The message to display when predication is false.
  */
-xs.assert = function(predication, errorMessage) {
+sh.assert = function(predication, errorMessage) {
     if (!predication) {
         if (!errorMessage) {
             errorMessage = "Assertion failed";
@@ -61,7 +61,7 @@ xs.assert = function(predication, errorMessage) {
  * @param  {Number} size In bytes.
  * @return {String}      The string containing digits and units.
  */
-xs.sizeToString = function(size) {
+sh.sizeToString = function(size) {
     /**
      * All available units.
      * @type {Array}

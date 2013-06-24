@@ -2,11 +2,11 @@
  * Used for sending files.
  */
 
-// xshare
-var xs = xs || {};
+// Share
+var sh = sh || {};
 
 // for debugging
-var assert = xs.assert;
+var assert = sh.assert;
 
 
 /**
@@ -162,7 +162,7 @@ var pairToReceive = function(socket) {
  */
 var confirmToSend = function(socket, partnerID, fileName, fileSize, conID) {
     var hint = "Confirm to send '" + fileName + "' " +
-               "(" + xs.sizeToString(fileSize) + ") " +
+               "(" + sh.sizeToString(fileSize) + ") " +
                "to user " + partnerID;
     if (confirm(hint)) {
         // confirmed, ready for sending
@@ -194,7 +194,7 @@ var confirmToSend = function(socket, partnerID, fileName, fileSize, conID) {
  */
 var confirmToReceive = function(socket, partnerID, fileName, fileSize, conID) {
     var hint = "Confirm to receive '" + fileName + "' " +
-               "(" + xs.sizeToString(fileSize) + ") " +
+               "(" + sh.sizeToString(fileSize) + ") " +
                "from user " + partnerID;
     if (confirm(hint)) {
         // confirmed, ready for receiving
