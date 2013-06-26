@@ -28,7 +28,6 @@ The following projects are used in this project:
 
 The following HTML(5) features have been used to achieve the goals:
 
-* <input type="file">
 * [File API][file]: Read the information of local files.
 * [XHR2][xhr2]: Send files and read progress using a more powerful AJAX in HTML5.
 
