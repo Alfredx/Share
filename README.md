@@ -16,6 +16,8 @@ It can be considered as a HTML5 version of [bump][bump].
 
 Pure JavaScript!
 
+To view the abstraction of how it works, see "flows.pdf".
+
 The following projects are used in this project:
 
 * [Node.js][nodejs]: for the server side. See [more resources][nodejs resources] for Node.js.
