@@ -2,7 +2,7 @@
  * Providing some useful functions for the whole project.
  */
 
-// Share
+// namespace for Share
 var sh = sh || {};
 
 /**

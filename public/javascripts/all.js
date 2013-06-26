@@ -2,7 +2,7 @@
  * Used for sending files.
  */
 
-// Share
+// namespace for Share
 var sh = sh || {};
 
 // for debugging
@@ -88,7 +88,8 @@ fileField.addEventListener('change', function(evt) {
             var prop = properties[i];
             selectedFile[prop] = f[prop];
         }
-        // save the File instance
+
+        // save the File instance, it will be used later in XHR2
         selectedFile['handle'] = f;
 
         results = "";
@@ -102,15 +103,6 @@ fileField.addEventListener('change', function(evt) {
     outputField.innerHTML = '<ul>' + output.join('') + "</ul>";
     sendButton.disabled = false;
 }, false);
-
-
-/**
- * User triggers a web request to connect and receive files.
- * @param  {Object} socket The socket in socket.io.
- */
-var tryReceive = function(socket) {
-    // TODO: @deprecated, may change to: new a url, click to open it in a new tab, then download a static file
-};
 
 
 /**

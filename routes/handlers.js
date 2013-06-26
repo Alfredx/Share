@@ -283,8 +283,15 @@ exports.init = function(io) {
     });
 };
 
+
+/**
+ * Display the default page.
+ * @param  {Object} req The Request object.
+ * @param  {Object} res The Response object.
+ */
 exports.index = function(req, res){
     var times = 1;
+    // I was trying using session, but it was no longer used.
     if (req.session.counter) {
         times = req.session.counter;
         req.session.counter++;
@@ -344,6 +351,9 @@ exports.download = function(req, res) {
 };
 
 
+/**
+ * The test page displays data in toSend, toReceive and paired.
+ */
 exports.test = function(req, res) {
     var newline = '<br/>';
 
