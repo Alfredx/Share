@@ -3,6 +3,7 @@
  * Module dependencies.
  */
 
+// importing other modules
 var express = require('express');
 var handlers = require('./routes/handlers');
 var http = require('http');
@@ -18,7 +19,7 @@ app.set('view engine', 'ejs');
 app.use(express.favicon());
 app.use(express.logger('dev'));
 app.use(express.bodyParser({
-    uploadDir: "./tmp"
+    uploadDir: "./tmp"  // save uploaded files to /tmp directory
 }));
 app.use(express.methodOverride());
 // randomly generated key
