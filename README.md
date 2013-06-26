@@ -16,8 +16,6 @@ It can be considered as a HTML5 version of [bump][bump].
 
 Pure JavaScript!
 
-To view the abstraction of how it works, see "flows.pdf".
-
 The following projects are used in this project:
 
 * [Node.js][nodejs]: for the server side. See [more resources][nodejs resources] for Node.js.
@@ -57,3 +55,8 @@ The following HTML(5) features might be employed: (*TODOs*)
 3. In the root directory of this project, "npm install" to install all dependency.
 4. "node app.js" to start server.
 5. In browser, access 192.168.1.xxx:port to use. (port is hardcoded to 3000 for development)
+
+
+## Flows
+
+![](flows.jpg)
