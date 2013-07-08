@@ -220,6 +220,7 @@ var setMouseEvent = function(){
     function onTouchMove(event){
         if(!isDraggable)
             return;
+        event.preventDefault();
         var oldX = canMouseX, oldY = canMouseY;
         canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
         canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
@@ -231,6 +232,13 @@ var setMouseEvent = function(){
             console.log(canMouseX + " " +canMouseY);
         }
     };
+
+    function onTouchCancel(event){
+        canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
+        canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
+        isDragging = false;
+        isDraggable = false;
+    }
             //console.log(canMouseX + " " +canMouseY);
 
 
@@ -241,7 +249,7 @@ var setMouseEvent = function(){
     canvas.addEventListener("touchstart", onTouchStart, false);
     canvas.addEventListener("touchmove", onTouchMove, false);
     canvas.addEventListener("touchend", onTouchEnd, false);
-    //canvas.addEventListener("touchcanvel", onMouseOut, false);
+    canvas.addEventListener("touchcanvel", onTouchCancel, false);
 
 }
 
