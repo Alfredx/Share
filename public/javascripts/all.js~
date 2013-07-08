@@ -117,16 +117,6 @@ var pairToSend = function(socket) {
 
     assert (selectedFile !== null);
 
-    /*
-     * Retrieve geo-location every time when you are about to send a file.
-     */
-    if (navigator.geolocation) {
-        getGeolocation();
-    }
-    else{
-	showMessage("Your browser does not support Geolocation");
-    }
-
     socket.emit('pairToSend', {
         'id': id,
         'geo': geo,
@@ -271,7 +261,7 @@ var onStartSending = function(socket, conID, senderID, receiverID) {
 /**
  * Init and save the geolocation data.
  */
-var getGeolocation = function() {
+var initGeolocation = function() {
     var onSuccess = function(pos) {
         geo = {
             'latitude': pos.coords.latitude,
@@ -401,16 +391,12 @@ var getGeolocation = function() {
     socket.on('uploadFailed', function(data) {
         showMessage("Uploading failed...");
     });
-    
-    /**
-     * Try to get geolocation on initialization
-     *
+
+    /*
+     * Retrieve geo-location if possible.
      */
     if (navigator.geolocation) {
-        getGeolocation();
-    }
-    else{
-	showMessage("Your browser does not support Geolocation");
+        initGeolocation();
     }
 
     sendButton.onclick = function() {

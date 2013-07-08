@@ -100,7 +100,7 @@ var Users = function() {
             if (theID in store) {
                 var u = store[theID];
                 callback(u);
-                //delete store[theID];
+                delete store[theID];
             }
         }, TIMEOUT);
     };
