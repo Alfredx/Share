@@ -23,3 +23,6 @@ node_modules/
 
 # for files saving directory
 tmp/
+
+#for emacs' temp file
+*.*~
