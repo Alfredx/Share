@@ -3,6 +3,7 @@
 <head>
     <title>Share - <%= title %></title>
     <link rel='stylesheet' href='/stylesheets/style.css'/>
+    <!-- <script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script> -->
 </head>
 <body>
     <h1>Share - <%= title %></h1>
@@ -22,6 +23,7 @@
     </p>
     <a href="" id="downloadLink" hidden>Download</a>
 
+    <canvas id="canvas" width="800" height="600"/>
     <!-- for socket.io -->
     <script type="text/javascript" src="/javascripts/socket.io.min.js"></script>
     <!-- for Share -->

@@ -30,7 +30,8 @@ var receiveButton = document.getElementById('receiveButton');
 var progressBar = document.getElementById('uploadProgress');
 // the <a> for downloading
 var downloadLink = document.getElementById('downloadLink');
-
+// canvas to show image
+var canvasField = document.getElementById('canvas');
 
 /**
  * The information of file to send.
@@ -65,22 +66,37 @@ var isConnected = false;
  */
 var geo = null;
 
+/**
+ * The context of canvas
+ * @type {Object}
+ */
+var context = canvas.getContext('2d');
+
+/**
+ *  The image object that displays the file
+ *  @type {Object}
+ */
+ var img;
 
 /**
  * Update the description for files selected dynamically.
  */
 fileField.addEventListener('change', function(evt) {
     var files = evt.target.files;
-    if (files.length === 0) {
+    if (files.length == 0) {
         outputField.innerHTML = "<ul></ul>";
         sendButton.disabled = true;
         selectedFile = null;
+        //clear canvas
+        canvas.width = canvas.width;
         return;
     }
 
     output = [];
     for (var idx = 0, size = files.length; idx < size; idx++) {
         f = files[idx];
+        drawImageOnCanvas(f);
+
         selectedFile = {};
         // only the following properties are common
         properties = ['name', 'type', 'size', 'lastModifiedDate'];
@@ -103,6 +119,133 @@ fileField.addEventListener('change', function(evt) {
     outputField.innerHTML = '<ul>' + output.join('') + "</ul>";
     sendButton.disabled = false;
 }, false);
+
+/**
+ *  Draw the selected file in canvas
+ *  @param f {Object} The file just selected
+ *  NOTE: only image file can be showed in canvas
+ */
+var drawImageOnCanvas = function(f){
+    //show in canvas;
+    img = new Image();
+    var url = window.URL || window.webkitURL;
+    var src = url.createObjectURL(f);
+    img.src = src;
+    img.onload = function(){
+        context.drawImage(img,0,0,400,img.height*(400/img.width));
+        setMouseEvent();
+        url.revokeObjectURL(src);
+    }
+};
+
+/**
+ *  Add mouse event in to canvas
+ */
+var setMouseEvent = function(){
+    // var canvasOffset = canvas.offset();
+    var offsetX = canvas.offsetLeft;
+    var offsetY = canvas.offsetTop;
+    var imgX = img.offsetLeft;
+    var imgY = img.offsetTop;
+    console.log(offsetX + " " + offsetY);
+    var isDragging = false;
+    var isDraggable = false;
+    var canMouseX = 0;
+    var canMouseY = 0;
+
+    function checkMouseInArea(){
+        if(canMouseX < imgX || canMouseX > imgX+400 || canMouseY < imgY || canMouseY > imgY+img.height*(400/img.width))
+            isDraggable = false;
+        else
+            isDraggable = true;
+        return isDraggable;
+    };
+
+    function onMouseDown(event){
+        canMouseX = parseInt(event.layerX);
+        canMouseY = parseInt(event.layerY);
+        if(!checkMouseInArea())
+            return;
+        imgOffsetX = canMouseX - imgX;
+        imgOffsetY = canMouseY - imgY;
+        isDragging = true;
+    };
+
+    function onMouseUp(event){
+        canMouseX = parseInt(event.layerX);
+        canMouseY = parseInt(event.layerY);
+        isDragging = false;
+        isDraggable = false;
+    };
+
+    function onMouseOut(event){
+        canMouseX = parseInt(event.layerX);
+        canMouseY = parseInt(event.layerY);
+        isDragging = false;
+        isDraggable = false;
+    };
+
+    function onMouseMove(event){
+        if(!isDraggable)
+            return;
+        var oldX = canMouseX, oldY = canMouseY;
+        canMouseX = parseInt(event.layerX);
+        canMouseY = parseInt(event.layerY);
+        imgX += (canMouseX-oldX);
+        imgY += (canMouseY-oldY);
+        if(isDragging){
+            canvas.width = canvas.width;
+            context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,400,img.height*(400/img.width));
+            console.log(canMouseX + " " +canMouseY);
+        }
+    };
+    
+    function onTouchStart(event){
+        canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
+        canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
+        if(!checkMouseInArea())
+            return;
+        imgOffsetX = canMouseX - imgX;
+        imgOffsetY = canMouseY - imgY;
+        isDragging = true;
+    };
+
+    function onTouchEnd(event){
+        canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
+        canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
+        isDragging = false;
+        isDraggable = false;
+    };
+
+    function onTouchMove(event){
+        if(!isDraggable)
+            return;
+        var oldX = canMouseX, oldY = canMouseY;
+        canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
+        canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
+        imgX += (canMouseX-oldX);
+        imgY += (canMouseY-oldY);
+        if(isDragging){
+            canvas.width = canvas.width;
+            context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,400,img.height*(400/img.width));
+            console.log(canMouseX + " " +canMouseY);
+        }
+    };
+            //console.log(canMouseX + " " +canMouseY);
+
+
+    canvas.onmousedown = onMouseDown;
+    canvas.onmouseup = onMouseUp;
+    canvas.onmouseout = onMouseOut;
+    canvas.onmousemove = onMouseMove;
+    canvas.addEventListener("touchstart", onTouchStart, false);
+    canvas.addEventListener("touchmove", onTouchMove, false);
+    canvas.addEventListener("touchend", onTouchEnd, false);
+    //canvas.addEventListener("touchcanvel", onMouseOut, false);
+
+}
+
+
 
 
 /**
@@ -410,7 +553,7 @@ var getGeolocation = function() {
         getGeolocation();
     }
     else{
-	showMessage("Your browser does not support Geolocation");
+	   showMessage("Your browser does not support Geolocation");
     }
 
     sendButton.onclick = function() {
@@ -420,4 +563,22 @@ var getGeolocation = function() {
     receiveButton.onclick = function() {
         pairToReceive(socket);
     };
+
+    // var mouseEventTypes = {
+    //     touchstart : "mousedown",
+    //     touchmove : "mousemove",
+    //     touchend : "mouseup"
+    // };
+
+    // for (originalType in mouseEventTypes) {
+    //     document.addEventListener(originalType, function(originalEvent) {
+    //         event = document.createEvent("MouseEvents");
+    //         touch = originalEvent.changedTouches[0];
+    //         event.initMouseEvent(mouseEventTypes[originalEvent.type], true, true,
+    //                             window, 0, touch.screenX, touch.screenY, touch.clientX,
+    //                             touch.clientY, touch.ctrlKey, touch.altKey, touch.shiftKey,
+    //                             touch.metaKey, 0, null);
+    //         originalEvent.target.dispatchEvent(event);
+    //     });
+    // }
 })();

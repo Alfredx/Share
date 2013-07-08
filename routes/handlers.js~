@@ -128,10 +128,6 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
         user.geoLongitude = geo.longitude;
         user.geoLatitude = geo.latitude;
         user.geoAccuracy = geo.accuracy;
-
-	console.log('latitude:'+geo.latitude);
-	console.log('longitude:'+geo.longitude);
-	console.log('accuracy:'+geo.accuracy);
     }
 
     var partner = toReceive.pickUpon(user);

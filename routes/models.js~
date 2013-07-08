@@ -111,7 +111,7 @@ var Users = function() {
      * @return {Object}          The nearest user.
      */
     this.pickUpon = function(baseUser) {
-	console.log(Object.keys(this._store));
+	console.log("[_store:] "+Object.keys(this._store));
         for (var uid in this._store) {
             // TODO: just pick one...
             return this._store[uid];

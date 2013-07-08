@@ -83,7 +83,7 @@ var Users = function() {
      * The timeout for making a pair. In milliseconds.
      * @type {Number}
      */
-    var TIMEOUT = 1500;
+    var TIMEOUT = 10000;
 
     /**
      * Add the user into this store for TIMEOUT milliseconds.
@@ -100,7 +100,7 @@ var Users = function() {
             if (theID in store) {
                 var u = store[theID];
                 callback(u);
-                //delete store[theID];
+                delete store[theID];
             }
         }, TIMEOUT);
     };
@@ -111,11 +111,68 @@ var Users = function() {
      * @return {Object}          The nearest user.
      */
     this.pickUpon = function(baseUser) {
-	console.log(Object.keys(this._store));
-        for (var uid in this._store) {
-            // TODO: just pick one...
-            return this._store[uid];
+	   console.log("[_store:] "+Object.keys(this._store));
+        // for (var uid in this._store) {
+        //     // TODO: just pick one...
+        //     return this._store[uid];
+        // }
+        var minDistance = 6378137.0;
+        var targetUser = null;
+        for(var uid in this._store){
+            var distance = this.geoDistance(this._store[uid].geoLatitude, this._store[uid].geoLongitude, baseUser.geoLatitude, baseUser.geoLongitude);
+            console.log("[distance User"+baseUser.id+" and "+uid+"] " + distance);
+            if(distance < minDistance){
+                minDistance = distance;
+                targetUser = this._store[uid];
+            }
         }
+        return targetUser;
+
+    };
+    /**
+     * Get the radian of an angle
+     * @oaram {Number} d    The angle
+     * @return {Number}     The radian
+     */
+    this.getRad = function(d){
+        return d*Math.PI/180.0;
+    };
+
+    /**
+     * Calculate the distance between two geo locations
+     * @param {Number} lat1 The latitude of location 1
+     * @param {Number} lng1 The longitude of location 1
+     * @param {Number} lat2 The latitude of location 2
+     * @param {Number} lng2 The longitude of location 2
+     * @return {Number}     The distance between two locations
+     */
+    this.geoDistance = function(lat1, lng1, lat2, lng2){
+        var f = this.getRad((lat1 + lat2)/2);
+        var g = this.getRad((lat1 - lat2)/2);
+        var l = this.getRad((lng1 - lng2)/2);
+        
+        var sg = Math.sin(g);
+        var sl = Math.sin(l);
+        var sf = Math.sin(f);
+        
+        var s,c,w,r,d,h1,h2;
+        var a = 6378137.0;  
+        var fl = 1/298.257;
+        
+        sg = sg*sg;
+        sl = sl*sl;
+        sf = sf*sf;
+        
+        s = sg*(1-sl) + (1-sf)*sl;
+        c = (1-sg)*(1-sl) + sf*sl;
+        
+        w = Math.atan(Math.sqrt(s/c));
+        r = Math.sqrt(s*c)/w;
+        d = 2*w*a;
+        h1 = (3*r -1)/2/c;
+        h2 = (3*r +1)/2/s;
+        
+        return d*(1 + fl*(h1*sf*(1-sg) - h2*(1-sf)*sg));
     };
 
     /**
