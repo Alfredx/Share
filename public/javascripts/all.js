@@ -23,9 +23,10 @@ var showMessage = function(msg) {
 var fileField = document.getElementById('sendFile');
 // output 
 var outputField = document.getElementById('selectedList');
-// send or receive
+// buttons
 var sendButton = document.getElementById('sendButton');
 var receiveButton = document.getElementById('receiveButton');
+var pairButton = document.getElementById('pairButton');
 // progress bar for sharing
 var progressBar = document.getElementById('uploadProgress');
 // the <a> for downloading
@@ -92,6 +93,11 @@ var context = canvas.getContext('2d');
  *  @type {Object}
  */
  var socket;
+
+ var connID;
+ var gPartnerID;
+
+ var isPaired = false;
 
 /**
  * Update the description for files selected dynamically.
@@ -215,12 +221,12 @@ var setMouseEvent = function(){
     };
 
     function onMouseOut(event){
-        isDragging = false;
-        isDraggable = false;
         canMouseX = parseInt(event.layerX);
         canMouseY = parseInt(event.layerY);
-        if(isMouseInSendArea())
+        if(isMouseInSendArea() && isDragging)
             pairToSend(socket);
+        isDragging = false;
+        isDraggable = false;
     };
 
     function onMouseMove(event){
@@ -251,15 +257,18 @@ var setMouseEvent = function(){
     };
 
     function onTouchEnd(event){
+        console.log("touchend");
         // canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
         // canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         isDragging = false;
         isDraggable = false;
         if(isMouseInSendArea())
             pairToSend(socket);
+
     };
 
     function onTouchMove(event){
+        console.log("touchmove");
         if(!isDraggable)
             return;
         event.preventDefault();
@@ -299,7 +308,28 @@ var setMouseEvent = function(){
 
 }
 
-
+/**
+ *  Try to find a pair but not send files
+ *  @param {Object} socket The socket used in socket.io
+ */
+ var findPair = function(socket) {
+    if (!isConnected) {
+        alert("Not connected to server => unable to share!");
+        return;
+    }
+    if (navigator.geolocation) {
+        getGeolocation();
+    }
+    else{
+       showMessage("Your browser does not support Geolocation");
+       return;
+    }
+    socket.emit('findPair',{
+        'id': id,
+        'geo':geo
+    });
+    showMessage("Finding the nearest user for you.. [me]" + id);
+ };
 
 
 /**
@@ -321,7 +351,8 @@ var pairToSend = function(socket) {
         getGeolocation();
     }
     else{
-	showMessage("Your browser does not support Geolocation");
+	   showMessage("Your browser does not support Geolocation");
+       return;
     }
 
     socket.emit('pairToSend', {
@@ -516,10 +547,12 @@ var getGeolocation = function() {
         showMessage('Connected!');
     });
     socket.on('disconnect', function() {
+        isPaired = false;
         isConnected = false;
         showMessage('Disconnected from server..');
     });
     socket.on('connect_failed', function() {
+        isPaired = false;
         isConnected = false;
         showMessage('Failed to connect server, is the network working?');
     });
@@ -555,9 +588,20 @@ var getGeolocation = function() {
     });
 
     /**
+     *  Succeeded on making a pair
+     */
+    socket.on('pairSucceeded', function(data) {
+        connID = data.connID;
+        gPartnerID = data.partnerID;
+        isPaired = true;
+        showMessage("Succeeded on making a pair with [user:] " + data.partnerID);
+    });
+
+    /**
      * Failed making a pair.
      */
     socket.on('pairFailed', function() {
+        isPaired = false;
         showMessage("Failed making a pair. It seems nobody is nearby.");
     });
 
@@ -590,6 +634,16 @@ var getGeolocation = function() {
 
         downloadLink.href = data.fileURL;
         downloadLink.click();
+        // var tmpimg = new Image();
+        // tmpimg.src = data.fileURL;
+
+        // tmpimg.onload = function(){
+        //     imgWidth = 400;
+        //     imgHeight = 400;
+        //     context.drawImage(tmpimg,0,0,imgWidth,imgHeight);
+        //     //setMouseEvent();
+        //     //url.revokeObjectURL(src);
+        // }
     });
 
     /**
@@ -618,21 +672,8 @@ var getGeolocation = function() {
         pairToReceive(socket);
     };
 
-    // var mouseEventTypes = {
-    //     touchstart : "mousedown",
-    //     touchmove : "mousemove",
-    //     touchend : "mouseup"
-    // };
+    pairButton.onclick = function() {
+        findPair(socket);
+    };
 
-    // for (originalType in mouseEventTypes) {
-    //     document.addEventListener(originalType, function(originalEvent) {
-    //         event = document.createEvent("MouseEvents");
-    //         touch = originalEvent.changedTouches[0];
-    //         event.initMouseEvent(mouseEventTypes[originalEvent.type], true, true,
-    //                             window, 0, touch.screenX, touch.screenY, touch.clientX,
-    //                             touch.clientY, touch.ctrlKey, touch.altKey, touch.shiftKey,
-    //                             touch.metaKey, 0, null);
-    //         originalEvent.target.dispatchEvent(event);
-    //     });
-    // }
 })();

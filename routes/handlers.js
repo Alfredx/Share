@@ -28,10 +28,14 @@ var toSend = new Users();
  */
 var toReceive = new Users();
 
+var toPair = new Users();
+
 /**
  * Managing all the connections that have been paired.
  */
 var paired = new Pairs();
+
+
 
 
 /**
@@ -71,17 +75,15 @@ var onPairToReceive = function(socket, receiveID, geo) {
     user.socket = socket;
     user.ip = parseAddress(socket);
     user.port = parsePort(socket);
-    if (geo) {
-        user.geoLatitude = geo.latitude;
-        user.geoLongitude = geo.longitude;
-        user.geoAccuracy = geo.accuracy;
-	
+    user.geoLatitude = geo.latitude;
+    user.geoLongitude = geo.longitude;
+    user.geoAccuracy = geo.accuracy;
+
 	console.log("[ID: "+user.id+"]");
 	console.log("[Latitude] "+geo.latitude);
 	console.log("[Longitude] "+geo.longitude);
 	console.log("[Accuracy] "+geo.accuracy);
 
-    }
 
     var partner = toSend.pickUpon(user);
     if (partner) {
@@ -129,16 +131,15 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
     user.port = parsePort(socket);
     user.fileName = fileInfo.name;
     user.fileSize = fileInfo.size;
-    if (geo) {
-        user.geoLongitude = geo.longitude;
-        user.geoLatitude = geo.latitude;
-        user.geoAccuracy = geo.accuracy;
+    user.geoLongitude = geo.longitude;
+    user.geoLatitude = geo.latitude;
+    user.geoAccuracy = geo.accuracy;
 
 	console.log("[ID: "+user.id+"]");
 	console.log("[Latitude] "+geo.latitude);
 	console.log("[Longitude] "+geo.longitude);
 	console.log("[Accuracy] "+geo.accuracy);
-    }
+
 
     var partner = toReceive.pickUpon(user);
     if (partner) {
@@ -167,6 +168,52 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
     }
 };
 
+/**
+ *  Called when a user wants to find a pair but not to send file
+ * @param  {Object} socket The  object used in socket.io.
+ * @param  {String} userID   The id for the user to receive.
+ * @param  {Object} geo         Null or A JSON object that contains latitude, longitude and accuracy.
+ */
+var onFindPair = function(socket, userID, geo) {
+    toPair.clear(userID);
+
+    var user = new UserData();
+    user.id = userID;
+    user.socket = socket;
+    user.ip = parseAddress(socket);
+    user.port = parsePort(socket);
+
+    user.geoLatitude = geo.latitude;
+    user.geoLongitude = geo.longitude;
+    user.geoAccuracy = geo.accuracy;
+
+    console.log("[ID: "+user.id+"]");
+    console.log("[Latitude] "+geo.latitude);
+    console.log("[Longitude] "+geo.longitude);
+    console.log("[Accuracy] "+geo.accuracy);
+
+    var partner = toPair.pickUpon(user);
+    if (partner) {
+        // successfully finds someone to pair, add into connection dict
+        var conID = paired.add(user, partner);
+        user.socket.emit('pairSucceeded', {
+            'connectionID': conID,
+            'partnerID': partner.id
+        });
+        partner.socket.emit('pairSucceeded', {
+            'connectionID': conID,
+            'partnerID': user.id
+        })
+
+        toPair.clear(partner.id);
+    } else {
+        // fails to pair
+        toPair.addTillExpire(user, function(u) {
+            u.socket.emit('pairFailed');
+        });
+    }
+
+};
 
 /**
  * Pair has been made, but one user disagrees to share file with the other.
@@ -277,6 +324,13 @@ var initSocket = function(socket) {
         con.receiver.socket.emit('uploadFailed', {
         });
         paired.clear(con.id);
+    });
+
+    /**
+     *  User tries to find pair
+     */
+    socket.on('findPair', function(data) {
+        onFindPair(socket, data.id, data.geo);
     });
 };
 

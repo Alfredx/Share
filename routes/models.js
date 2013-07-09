@@ -77,6 +77,7 @@ var Users = function() {
      */
     this.clear = function(userID) {
         delete this._store[userID];
+
     };
 
     /**
@@ -84,6 +85,12 @@ var Users = function() {
      * @type {Number}
      */
     var TIMEOUT = 10000;
+
+    /**
+     *  The largest legal geo distance(Meter) of two users
+     *  @type {Number}
+     */
+    var MAXDISTANCE = 50.0;
 
     /**
      * Add the user into this store for TIMEOUT milliseconds.
@@ -112,10 +119,6 @@ var Users = function() {
      */
     this.pickUpon = function(baseUser) {
 	   console.log("[_store:] "+Object.keys(this._store));
-        // for (var uid in this._store) {
-        //     // TODO: just pick one...
-        //     return this._store[uid];
-        // }
         var minDistance = 6378137.0;
         var targetUser = null;
         for(var uid in this._store){
@@ -126,6 +129,8 @@ var Users = function() {
                 targetUser = this._store[uid];
             }
         }
+        if(minDistance > MAXDISTANCE)
+            targetUser = null;
         return targetUser;
 
     };
@@ -166,6 +171,7 @@ var Users = function() {
         s = sg*(1-sl) + (1-sf)*sl;
         c = (1-sg)*(1-sl) + sf*sl;
         
+
         w = Math.atan(Math.sqrt(s/c));
         r = Math.sqrt(s*c)/w;
         d = 2*w*a;
