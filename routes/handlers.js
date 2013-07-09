@@ -203,7 +203,7 @@ var onFindPair = function(socket, userID, geo) {
         partner.socket.emit('pairSucceeded', {
             'connectionID': conID,
             'partnerID': user.id
-        })
+        });
 
         toPair.clear(partner.id);
     } else {
@@ -310,6 +310,7 @@ var initSocket = function(socket) {
      */
     socket.on('uploadProgress', function(data) {
         var con = paired.get(data.connectionID);
+        console.log(con);
         var percent = data.progress;
         con.receiver.socket.emit('uploadProgress', {
             'progress': percent
@@ -393,8 +394,10 @@ exports.upload = function(req, res) {
     con.receiver.socket.emit('uploadSuccess', {
         'fileURL': url
     });
-
-    paired.clear(conID);
+    setTimeout(function(){
+        paired.clear(conID);
+    },1000);
+    
     res.send(200);
 };
 

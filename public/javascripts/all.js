@@ -94,7 +94,7 @@ var context = canvas.getContext('2d');
  */
  var socket;
 
- var connID;
+ var gConID;
  var gPartnerID;
 
  var isPaired = false;
@@ -591,7 +591,7 @@ var getGeolocation = function() {
      *  Succeeded on making a pair
      */
     socket.on('pairSucceeded', function(data) {
-        connID = data.connID;
+        gConID = data.connectionID;
         gPartnerID = data.partnerID;
         isPaired = true;
         showMessage("Succeeded on making a pair with [user:] " + data.partnerID);
@@ -633,17 +633,17 @@ var getGeolocation = function() {
         showMessage("Ready to receive!");
 
         downloadLink.href = data.fileURL;
-        downloadLink.click();
-        // var tmpimg = new Image();
-        // tmpimg.src = data.fileURL;
+        //downloadLink.click();
+        var tmpimg = new Image();
+        tmpimg.src = data.fileURL;
 
-        // tmpimg.onload = function(){
-        //     imgWidth = 400;
-        //     imgHeight = 400;
-        //     context.drawImage(tmpimg,0,0,imgWidth,imgHeight);
-        //     //setMouseEvent();
-        //     //url.revokeObjectURL(src);
-        // }
+        tmpimg.onload = function(){
+            imgWidth = 400;
+            imgHeight = 400;
+            context.drawImage(tmpimg,0,0,imgWidth,imgHeight);
+            //setMouseEvent();
+            //url.revokeObjectURL(src);
+        }
     });
 
     /**
