@@ -76,7 +76,22 @@ var context = canvas.getContext('2d');
  *  The image object that displays the file
  *  @type {Object}
  */
- var img;
+ var img = null;
+
+/**
+ *  The width and height of the image on canvas
+ *  @type {Number}
+ *  NOTE: to make the image fit screen, 
+ *        the width and height is not the same as img.width or img.height
+ */
+ var imgWidth = 0;
+ var imgHeight = 0;
+
+/**
+ *  Socket for connection
+ *  @type {Object}
+ */
+ var socket;
 
 /**
  * Update the description for files selected dynamically.
@@ -131,8 +146,11 @@ var drawImageOnCanvas = function(f){
     var url = window.URL || window.webkitURL;
     var src = url.createObjectURL(f);
     img.src = src;
+
     img.onload = function(){
-        context.drawImage(img,0,0,400,img.height*(400/img.width));
+        imgWidth = 400;
+        imgHeight = img.height*(imgWidth/img.width);
+        context.drawImage(img,0,0,imgWidth,imgHeight);
         setMouseEvent();
         url.revokeObjectURL(src);
     }
@@ -154,12 +172,28 @@ var setMouseEvent = function(){
     var canMouseY = 0;
 
     function checkMouseInArea(){
-        if(canMouseX < imgX || canMouseX > imgX+400 || canMouseY < imgY || canMouseY > imgY+img.height*(400/img.width))
+        if(canMouseX < imgX || canMouseX > imgX+imgWidth || canMouseY < imgY || canMouseY > imgY+imgHeight)
             isDraggable = false;
         else
             isDraggable = true;
         return isDraggable;
     };
+
+    function isMouseInSendArea(){
+        if((canMouseX <= 100) || (canMouseX >= canvas.width-100))
+            return true;
+        else
+            return false;
+    }
+
+    function isImgInCanvas(){
+        // if(imgY >= 0 && imgY+imgHeight < canvas.height)
+        //     return true;
+        // else 
+        //     return false;
+        //TODO: can I drag up to send an img
+        return true;
+    }
 
     function onMouseDown(event){
         canMouseX = parseInt(event.layerX);
@@ -176,13 +210,17 @@ var setMouseEvent = function(){
         canMouseY = parseInt(event.layerY);
         isDragging = false;
         isDraggable = false;
+        if(isMouseInSendArea())
+            pairToSend(socket);
     };
 
     function onMouseOut(event){
-        canMouseX = parseInt(event.layerX);
-        canMouseY = parseInt(event.layerY);
         isDragging = false;
         isDraggable = false;
+        canMouseX = parseInt(event.layerX);
+        canMouseY = parseInt(event.layerY);
+        if(isMouseInSendArea())
+            pairToSend(socket);
     };
 
     function onMouseMove(event){
@@ -193,10 +231,12 @@ var setMouseEvent = function(){
         canMouseY = parseInt(event.layerY);
         imgX += (canMouseX-oldX);
         imgY += (canMouseY-oldY);
+        if(!isImgInCanvas())
+            return;
         if(isDragging){
             canvas.width = canvas.width;
-            context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,400,img.height*(400/img.width));
-            console.log(canMouseX + " " +canMouseY);
+            context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
+            //console.log(canMouseX + " " +canMouseY);
         }
     };
     
@@ -211,10 +251,12 @@ var setMouseEvent = function(){
     };
 
     function onTouchEnd(event){
-        canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
-        canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
+        // canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
+        // canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         isDragging = false;
         isDraggable = false;
+        if(isMouseInSendArea())
+            pairToSend(socket);
     };
 
     function onTouchMove(event){
@@ -226,9 +268,11 @@ var setMouseEvent = function(){
         canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         imgX += (canMouseX-oldX);
         imgY += (canMouseY-oldY);
+        if(!isImgInCanvas())
+            return;
         if(isDragging){
             canvas.width = canvas.width;
-            context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,400,img.height*(400/img.width));
+            context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
             console.log(canMouseX + " " +canMouseY);
         }
     };
@@ -238,6 +282,8 @@ var setMouseEvent = function(){
         canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         isDragging = false;
         isDraggable = false;
+        // if(isMouseInSendArea())
+        //     pairToSend(socket);
     }
             //console.log(canMouseX + " " +canMouseY);
 
@@ -459,7 +505,7 @@ var getGeolocation = function() {
     }
     // All APIs supported
 
-    var socket = io.connect('/');
+    socket = io.connect('/');
 
     socket.on('connecting', function() {
         isConnected = false;
