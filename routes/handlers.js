@@ -75,15 +75,11 @@ var onPairToReceive = function(socket, receiveID, geo) {
     user.socket = socket;
     user.ip = parseAddress(socket);
     user.port = parsePort(socket);
-    user.geoLatitude = geo.latitude;
-    user.geoLongitude = geo.longitude;
-    user.geoAccuracy = geo.accuracy;
-
-	console.log("[ID: "+user.id+"]");
-	console.log("[Latitude] "+geo.latitude);
-	console.log("[Longitude] "+geo.longitude);
-	console.log("[Accuracy] "+geo.accuracy);
-
+    if(geo){
+        user.geoLatitude = geo.latitude;
+        user.geoLongitude = geo.longitude;
+        user.geoAccuracy = geo.accuracy;
+    }
 
     var partner = toSend.pickUpon(user);
     if (partner) {
@@ -131,15 +127,11 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
     user.port = parsePort(socket);
     user.fileName = fileInfo.name;
     user.fileSize = fileInfo.size;
-    user.geoLongitude = geo.longitude;
-    user.geoLatitude = geo.latitude;
-    user.geoAccuracy = geo.accuracy;
-
-	console.log("[ID: "+user.id+"]");
-	console.log("[Latitude] "+geo.latitude);
-	console.log("[Longitude] "+geo.longitude);
-	console.log("[Accuracy] "+geo.accuracy);
-
+    if(geo){
+        user.geoLongitude = geo.longitude;
+        user.geoLatitude = geo.latitude;
+        user.geoAccuracy = geo.accuracy;
+    }
 
     var partner = toReceive.pickUpon(user);
     if (partner) {
@@ -182,15 +174,11 @@ var onFindPair = function(socket, userID, geo) {
     user.socket = socket;
     user.ip = parseAddress(socket);
     user.port = parsePort(socket);
-
-    user.geoLatitude = geo.latitude;
-    user.geoLongitude = geo.longitude;
-    user.geoAccuracy = geo.accuracy;
-
-    console.log("[ID: "+user.id+"]");
-    console.log("[Latitude] "+geo.latitude);
-    console.log("[Longitude] "+geo.longitude);
-    console.log("[Accuracy] "+geo.accuracy);
+    if(geo){
+        user.geoLatitude = geo.latitude;
+        user.geoLongitude = geo.longitude;
+        user.geoAccuracy = geo.accuracy;
+    }
 
     var partner = toPair.pickUpon(user);
     if (partner) {
@@ -310,7 +298,6 @@ var initSocket = function(socket) {
      */
     socket.on('uploadProgress', function(data) {
         var con = paired.get(data.connectionID);
-        console.log(con);
         var percent = data.progress;
         con.receiver.socket.emit('uploadProgress', {
             'progress': percent
@@ -387,16 +374,24 @@ exports.upload = function(req, res) {
 
     var con = paired.get(conID);
 
-    var f = req.files.uploadedFile;
+    // var f = req.files.uploadedFile;
+    var f = req.files[Object.keys(req.files)[0]];
+    var seq = req.body.seq;
+    var maxseq = req.body.maxseq;
+    con.setMat(maxseq);
+    con.setArrive(seq);
     var url = '/download?path=' + encodeURIComponent(f.path) +
               '&name=' + encodeURIComponent(con.sender.fileName);
-
     con.receiver.socket.emit('uploadSuccess', {
-        'fileURL': url
+        'fileURL': url,
+        'seq': seq,
+        'maxseq': maxseq
     });
-    setTimeout(function(){
-        paired.clear(conID);
-    },1000);
+    if(con.isFinished()){
+        setTimeout(function(){
+            paired.clear(conID);
+        },1000);
+    }
     
     res.send(200);
 };

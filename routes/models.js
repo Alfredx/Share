@@ -232,6 +232,58 @@ var Connection = function() {
      * @type {String}
      */
     this.status = "INIT";
+
+    /**
+     *  Whether this connection is ok to delete
+     *  @type {Boolean}
+     */
+    this.finished = false;
+
+    /**
+     *  Max sequence of this connection
+     *  @type {Number}
+     */
+    this.maxseq = null;
+
+    /**
+     *  Sequence Matrix, using which to tell all the chunks are sent
+     *  @type {Array}
+     */
+    this.seqMat;
+
+    /**
+     *  To set one sequence number as true, means this chunk is sent
+     *  @param  {Number}    seq     the specified sequence number
+     */
+    this.setArrive = function(seq){
+        this.seqMat[seq] = true;
+    }
+
+    /**
+     *  initialize the matrix. all set to false
+     *  @param  {Number}    max
+     */
+    this.setMat = function(max) {
+        if(this.maxseq)
+            return;
+        this.maxseq = max;
+        this.seqMat = new Array(this.maxseq);
+        for (var i = 0; i < this.maxseq; i++) {
+            this.seqMat[i] = false;
+        };
+    }
+
+    /**
+     *  See if all chunks are sent
+     *  @return {Boolean}
+     */
+    this.isFinished = function() {
+        for(var i = 0; i < this.maxseq; i++){
+            if(!this.seqMat[i])
+                return false;
+        }
+        return true;
+    }
 };
 
 

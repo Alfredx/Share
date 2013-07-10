@@ -99,6 +99,21 @@ var context = canvas.getContext('2d');
 
  var isPaired = false;
 
+const SLICE = false;
+
+ /**
+  * Show if all chunks are received
+  */
+ var isFileCompleted = true;
+
+/**
+ *  File Matrix. To save all the chunks received
+ *  @type {Array}
+ */
+var fileMatrix = null;
+
+var currentChunk = 0;
+
 /**
  * Update the description for files selected dynamically.
  */
@@ -457,37 +472,13 @@ var onStartSending = function(socket, conID, senderID, receiverID) {
     if (id === senderID) {
         // self is the sender
         assert(selectedFile !== null);
-
-        // send files wrapped in a FormData using XHR2
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/upload?connectionID=' + conID, true);
-        xhr.onload = function(e) {
-            progressBar.hidden = true;
-            if (this.status === 200) {
-                showMessage("Uploading finished.");
-            } else {
-                showMessage("Error uploading?!");
-                console.log("ERROR uploading?");
-            }
-        };
-
-        // update the progress bar while uploading
-        progressBar.hidden = false;
-        xhr.upload.onprogress = function(e) {
-            if (e.lengthComputable) {
-                var percent = e.loaded / e.total;
-                progressBar.value = percent * 100;
-
-                socket.emit('uploadProgress', {
-                    'connectionID': conID,
-                    'progress': Math.round(percent * 100)
-                });
-            }
-        };
-
-        var fd = new FormData();
-        fd.append('uploadedFile', selectedFile['handle']);
-        xhr.send(fd);
+        if(SLICE){
+            sliceAndSend(conID);
+        }
+        else{
+            sendAsOneFile(socket, conID);
+        }
+        
         showMessage("Confirmed, uploading now...");
     } else if (id === receiverID) {
         // self is the receiver
@@ -495,6 +486,92 @@ var onStartSending = function(socket, conID, senderID, receiverID) {
     }
 };
 
+var sendAsOneFile = function(socket, conID){
+    //send files wrapped in a FormData using XHR2
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/upload?connectionID=' + conID, true);
+    xhr.onload = function(e) {
+        progressBar.hidden = true;
+        if (this.status === 200) {
+            showMessage("Uploading finished.");
+        } else {
+            showMessage("Error uploading?!");
+            console.log("ERROR uploading?");
+        }
+    };
+
+    // update the progress bar while uploading
+    progressBar.hidden = false;
+    xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+            var percent = e.loaded / e.total;
+            progressBar.value = percent * 100;
+
+            socket.emit('uploadProgress', {
+                'connectionID': conID,
+                'progress': Math.round(percent * 100)
+            });
+        }
+    };
+
+    var fd = new FormData();
+    fd.append('uploadedFile', selectedFile['handle']);
+    xhr.send(fd);
+}
+
+var sliceAndSend = function(conID) {
+    window.BlobBuilder = window.MozBlobBuilder || window.WebKitBlobBuilder || window.BlobBuilder;
+    var blob = selectedFile['handle'];
+    const BYTES_PER_CHUNK = 1024*50;
+    const SIZE = blob.size;
+
+    var seq = 0;
+    var start = 0;
+    var end = BYTES_PER_CHUNK;
+
+    const MAXSEQ = parseInt(SIZE/BYTES_PER_CHUNK)
+
+    while(start < SIZE) {
+        if('mozSlice' in blob){
+            var chunk = blob.mozSlice(start, end);
+        }
+        else if('webkitSlice' in blob){
+            var chunk = blob.webkitSlice(start,end);
+        }
+        else{
+            var chunk = blob.slice(start, end);
+        }
+        chunk.path = blob.path;
+
+        var fd = new FormData();
+        fd.append('uploadedChunk',chunk);
+        fd.append('seq',seq);
+        fd.append('maxseq',MAXSEQ);
+        uploadAChunk(fd,seq++,conID);
+
+        start = end;
+        end = start + BYTES_PER_CHUNK;
+        if(end > SIZE)
+            end = SIZE;
+    }
+}
+
+var uploadAChunk = function(chunk, seq, conID) {
+    // send files wrapped in a FormData using XHR2
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/upload?connectionID=' + conID, true);
+    xhr.onload = function(e) {
+        progressBar.hidden = true;
+        if (this.status === 200) {
+            showMessage("Uploading finished. seq:"+seq);
+        } else {
+            showMessage("Error uploading?!");
+            console.log("ERROR uploading?");
+        }
+    };
+
+    xhr.send(chunk);
+};
 
 /**
  * Init and save the geolocation data.
@@ -594,7 +671,7 @@ var getGeolocation = function() {
         gConID = data.connectionID;
         gPartnerID = data.partnerID;
         isPaired = true;
-        showMessage("Succeeded on making a pair with [user:] " + data.partnerID);
+        showMessage("Succeeded on making pair with [user:] " + data.partnerID);
     });
 
     /**
@@ -634,15 +711,56 @@ var getGeolocation = function() {
 
         downloadLink.href = data.fileURL;
         //downloadLink.click();
+
         var tmpimg = new Image();
         tmpimg.src = data.fileURL;
 
+        var seq = data.seq;
+        var maxseq = data.maxseq;
+        console.log(seq + "-" + maxseq);
+        console.log("isFileCompleted " + isFileCompleted);
+        if(isFileCompleted){
+            fileMatrix = new Array(maxseq+1);
+            for (var i = 0; i < maxseq+1; i++) {
+                fileMatrix[i] = null;
+            };
+            currentChunk = 0;
+            isFileCompleted = false;
+        }
+        
+        window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || 
+                                           window.webkitResolveLocalFileSystemURL;
+
+        //TODO! problem is here!!!! can not get correct url
+        var url = window.URL || window.webkitURL;
+        url = url.createObjectURL(tmpimg);
+        url = 'filesystem:'+url;
+        console.log(url);
+
+
+        window.resolveLocalFileSystemURL(url, function(fileEntry) {
+            fileMatrix[seq] = fileEntry;
+            console.log("fileEntry at seq " + seq);
+            if(fileMatrix[0]){
+                while(fileMatrix[currentChunk+1]){
+                    fileMatrix[0].createWriter(function(fileWriter) {
+                                fileWriter.seek(fileWriter.length);
+                                fileWriter.write(fileMatrix[currentChunk+1]);
+                                currentChunk++;
+                    },function(e){console.log("error");});
+                }
+            }
+        });
+        if(currentChunk == maxseq+1){
+            fileMatrix = true;
+        }
+       
+        console.log(fileMatrix[0]);
+        
         tmpimg.onload = function(){
             imgWidth = 400;
             imgHeight = 400;
-            context.drawImage(tmpimg,0,0,imgWidth,imgHeight);
-            //setMouseEvent();
-            //url.revokeObjectURL(src);
+            context.drawImage(tmpimg,0,400*seq,imgWidth,imgHeight);
         }
     });
 
