@@ -99,7 +99,7 @@ var context = canvas.getContext('2d');
 
  var isPaired = false;
 
-const SLICE = false;
+const SLICE = true;
 
  /**
   * Show if all chunks are received
@@ -114,6 +114,11 @@ var fileMatrix = null;
 
 var currentChunk = 0;
 
+
+window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;
+window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || 
+                                           window.webkitResolveLocalFileSystemURL;
+
 /**
  * Update the description for files selected dynamically.
  */
@@ -125,6 +130,7 @@ fileField.addEventListener('change', function(evt) {
         selectedFile = null;
         //clear canvas
         canvas.width = canvas.width;
+        img = null;
         return;
     }
 
@@ -520,9 +526,9 @@ var sendAsOneFile = function(socket, conID){
 }
 
 var sliceAndSend = function(conID) {
-    window.BlobBuilder = window.MozBlobBuilder || window.WebKitBlobBuilder || window.BlobBuilder;
+    
     var blob = selectedFile['handle'];
-    const BYTES_PER_CHUNK = 1024*50;
+    const BYTES_PER_CHUNK = 1024*200;
     const SIZE = blob.size;
 
     var seq = 0;
@@ -547,6 +553,7 @@ var sliceAndSend = function(conID) {
         fd.append('uploadedChunk',chunk);
         fd.append('seq',seq);
         fd.append('maxseq',MAXSEQ);
+
         uploadAChunk(fd,seq++,conID);
 
         start = end;
@@ -712,55 +719,110 @@ var getGeolocation = function() {
         downloadLink.href = data.fileURL;
         //downloadLink.click();
 
-        var tmpimg = new Image();
-        tmpimg.src = data.fileURL;
-
-        var seq = data.seq;
-        var maxseq = data.maxseq;
-        console.log(seq + "-" + maxseq);
-        console.log("isFileCompleted " + isFileCompleted);
-        if(isFileCompleted){
-            fileMatrix = new Array(maxseq+1);
-            for (var i = 0; i < maxseq+1; i++) {
-                fileMatrix[i] = null;
-            };
-            currentChunk = 0;
-            isFileCompleted = false;
-        }
         
-        window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || 
-                                           window.webkitResolveLocalFileSystemURL;
+        if(SLICE){
+            var tmpimg = new Image();
+            
 
-        //TODO! problem is here!!!! can not get correct url
-        var url = window.URL || window.webkitURL;
-        url = url.createObjectURL(tmpimg);
-        url = 'filesystem:'+url;
-        console.log(url);
-
-
-        window.resolveLocalFileSystemURL(url, function(fileEntry) {
-            fileMatrix[seq] = fileEntry;
-            console.log("fileEntry at seq " + seq);
-            if(fileMatrix[0]){
-                while(fileMatrix[currentChunk+1]){
-                    fileMatrix[0].createWriter(function(fileWriter) {
-                                fileWriter.seek(fileWriter.length);
-                                fileWriter.write(fileMatrix[currentChunk+1]);
-                                currentChunk++;
-                    },function(e){console.log("error");});
-                }
+            var seq = data.seq;
+            var maxseq = data.maxseq;
+            console.log(seq + "-" + maxseq);
+            console.log("isFileCompleted " + isFileCompleted);
+            if(isFileCompleted){
+                fileMatrix = new Array(maxseq+2);
+                for (var i = 0; i < maxseq+2; i++) {
+                    fileMatrix[i] = null;
+                };
+                currentChunk = 0;
+                isFileCompleted = false;
             }
-        });
-        if(currentChunk == maxseq+1){
-            fileMatrix = true;
+            
+            
+            //console.log(BlobBuilder);
+            var url = data.fileURL;
+            url = url.replace(/download/,"file");
+            tmpimg.src = url;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET',url, true);
+            xhr.responseType = 'blob';
+            xhr.onload = function(e){
+                window.requestFileSystem(TEMPORARY, 5*1024*1024, function(fs){
+                    fs.root.getFile(seq.toString(), {create:true},function(fileEntry){
+                        fileEntry.createWriter(function(writer){
+
+                            
+                            writer.onwriteend = function(){
+                                if(fileMatrix[0]){
+                                    if(fileMatrix[currentChunk+1]){
+                                        // fileMatrix[0].createWriter(function(fileWriter) {
+                                        //             fileWriter.seek(fileWriter.length);
+                                        //             fileWriter.write(fileMatrix[currentChunk+1]);
+                                        //             currentChunk++;
+                                        // },function(e){console.log("error");});
+                                        // fileMatrix[currentChunk+1].file(function(file){
+                                        //     var reader = new FileReader();
+                                        //     reader.onloadend = function(e) {
+                                        //         writer.seek(writer.length);
+                                        //         console.log(this.result);
+                                        //         writer.write(this.result);
+                                        //         currentChunk++;
+                                        //     };
+                                        //     reader.readAsText(file);
+                                        // },function(e){});
+                                        writer.seek(writer.length);
+                                        writer.write(fileMatrix[currentChunk+1]);
+                                        currentChunk++;
+                                    }
+                                }
+                                else{
+                                    console.log("called but file is null");
+                                }
+                                console.log("currentChunk: " + currentChunk);
+                                if(currentChunk == maxseq+1){
+                                    fileMatrix = true;
+                                }
+                                console.log(fileMatrix[0]);
+                                tmpimg.src = fileMatrix[0].toURL();
+                                tmpimg.onload = function(){
+                                    imgWidth = 400;
+                                    imgHeight = 400;
+                                    context.drawImage(tmpimg,0,400*seq,imgWidth,imgHeight);
+                                }
+                            }
+                            if(seq == 0){
+                                writer.write(xhr.response);
+                                fileMatrix[0] = fileEntry;
+                            }
+                            else{
+                                //write is only called once because no write() is called here
+                                fileMatrix[seq] = xhr.response;
+                            }
+                            
+                        },function(error){
+                            console.log("error when creating writer");
+                        });                  
+                    },function(err){
+                        console.log("error when creating file");
+                    });
+                },function(err){
+                    console.log("error when requesting FS");
+                });
+            };
+            xhr.send();
+  
         }
-       
-        console.log(fileMatrix[0]);
-        
-        tmpimg.onload = function(){
-            imgWidth = 400;
-            imgHeight = 400;
-            context.drawImage(tmpimg,0,400*seq,imgWidth,imgHeight);
+        else{
+            var tmpimg = new Image();
+            tmpimg.src = data.fileURL;
+
+            tmpimg.onload = function(){
+                imgWidth = 400;     
+                imgHeight = 400;
+                context.drawImage(tmpimg,0,0,imgWidth,imgHeight);
+                //setMouseEvent();
+                //url.revokeObjectURL(src);
+            }
         }
     });
 

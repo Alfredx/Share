@@ -37,6 +37,8 @@ if ('development' == app.get('env')) {
 app.get('/', handlers.index);
 app.post('/upload', handlers.upload);
 app.get('/download', handlers.download);
+app.get('/file',handlers.staticfile);
+
 // only for testing
 app.get('/test', handlers.test);
 

@@ -3,6 +3,10 @@
  */
 
 var models = require('./models');
+var path = require("path");
+var fs = require("fs");
+var url = require("url");
+var mime = require("./mime").types;
 
 var UserData = models.UserData;
 var Users = models.Users;
@@ -412,6 +416,38 @@ exports.download = function(req, res) {
 
     // TODO: the default fileName will not be reader in Chinese and other characters.
     res.download(path, name);
+};
+
+
+exports.staticfile = function(req, res) {
+    var pathname = req.query.path;
+    var realPath = pathname;
+    console.log(realPath);
+    
+    var ext = path.extname(realPath);
+    ext = ext ? ext.slice(1) : 'unknown';
+
+    fs.exists(realPath,function(exists) {
+        if(!exists) {
+            res.writeHead(404, {'Content-Type':'text/plain'});
+            res.write("This request URL "+ pathname+" was not found on this server");
+            res.end();
+        }
+        else {
+            fs.readFile(realPath,"binary",function(err, file) {
+                if(err){
+                    res.writeHead(500, {'Content-Type':'text/plain'});
+                    res.end(err);
+                }
+                else{
+                    var contenType = mime[ext] || "image/jpeg";
+                    res.writeHead(200, {'Content-Type': contenType});
+                    res.write(file,"binary");
+                    res.end();
+                }
+            });
+        }
+    });
 };
 
 
