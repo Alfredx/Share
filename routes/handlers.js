@@ -389,7 +389,8 @@ exports.upload = function(req, res) {
     con.receiver.socket.emit('uploadSuccess', {
         'fileURL': url,
         'seq': seq,
-        'maxseq': maxseq
+        'maxseq': maxseq,
+        'fileName': con.sender.fileName
     });
     if(con.isFinished()){
         setTimeout(function(){

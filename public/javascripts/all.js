@@ -101,6 +101,8 @@ var context = canvas.getContext('2d');
 
 const SLICE = true;
 
+const BYTES_PER_CHUNK = 1024*200;
+
  /**
   * Show if all chunks are received
   */
@@ -137,7 +139,9 @@ fileField.addEventListener('change', function(evt) {
     output = [];
     for (var idx = 0, size = files.length; idx < size; idx++) {
         f = files[idx];
-        drawImageOnCanvas(f);
+        var url = window.URL || window.webkitURL;
+        var src = url.createObjectURL(f);
+        drawImageOnCanvas(src);
 
         selectedFile = {};
         // only the following properties are common
@@ -167,11 +171,9 @@ fileField.addEventListener('change', function(evt) {
  *  @param f {Object} The file just selected
  *  NOTE: only image file can be showed in canvas
  */
-var drawImageOnCanvas = function(f){
+var drawImageOnCanvas = function(src){
     //show in canvas;
     img = new Image();
-    var url = window.URL || window.webkitURL;
-    var src = url.createObjectURL(f);
     img.src = src;
 
     img.onload = function(){
@@ -179,7 +181,7 @@ var drawImageOnCanvas = function(f){
         imgHeight = img.height*(imgWidth/img.width);
         context.drawImage(img,0,0,imgWidth,imgHeight);
         setMouseEvent();
-        url.revokeObjectURL(src);
+        
     }
 };
 
@@ -192,7 +194,6 @@ var setMouseEvent = function(){
     var offsetY = canvas.offsetTop;
     var imgX = img.offsetLeft;
     var imgY = img.offsetTop;
-    console.log(offsetX + " " + offsetY);
     var isDragging = false;
     var isDraggable = false;
     var canMouseX = 0;
@@ -278,7 +279,6 @@ var setMouseEvent = function(){
     };
 
     function onTouchEnd(event){
-        console.log("touchend");
         // canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
         // canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         isDragging = false;
@@ -289,7 +289,6 @@ var setMouseEvent = function(){
     };
 
     function onTouchMove(event){
-        console.log("touchmove");
         if(!isDraggable)
             return;
         event.preventDefault();
@@ -303,7 +302,6 @@ var setMouseEvent = function(){
         if(isDragging){
             canvas.width = canvas.width;
             context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
-            console.log(canMouseX + " " +canMouseY);
         }
     };
 
@@ -528,14 +526,16 @@ var sendAsOneFile = function(socket, conID){
 var sliceAndSend = function(conID) {
     
     var blob = selectedFile['handle'];
-    const BYTES_PER_CHUNK = 1024*200;
+    
     const SIZE = blob.size;
 
     var seq = 0;
     var start = 0;
     var end = BYTES_PER_CHUNK;
+    var increasement = BYTES_PER_CHUNK/20;
 
     const MAXSEQ = parseInt(SIZE/BYTES_PER_CHUNK)
+    //var MAXSEQ = 8;
 
     while(start < SIZE) {
         if('mozSlice' in blob){
@@ -560,6 +560,7 @@ var sliceAndSend = function(conID) {
         end = start + BYTES_PER_CHUNK;
         if(end > SIZE)
             end = SIZE;
+        increasement *= 2;
     }
 }
 
@@ -604,6 +605,69 @@ var getGeolocation = function() {
     });
 };
 
+var initFileMatrix = function(maxseq) {
+    if(isFileCompleted){
+        fileMatrix = new Array(maxseq+2);
+        for (var i = 0; i < maxseq+2; i++) {
+            fileMatrix[i] = null;
+        };
+        currentChunk = 0;
+        isFileCompleted = false;
+    }
+};
+
+var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName){
+    window.requestFileSystem(TEMPORARY, 5*1024*1024, function(fs){
+        fs.root.getFile(fileName, {create:true},function(fileEntry){
+            fileEntry.createWriter(function(writer){
+                writer.onwriteend = function(){
+                    if(fileMatrix[0]){
+                        if(fileMatrix[currentChunk+1]){
+                            console.log("currentChunk: " + currentChunk);
+                            console.log("length: "+writer.length);
+                            writer.seek(writer.length);
+                            writer.write(fileMatrix[currentChunk+1]);
+                            currentChunk++;
+                            if(currentChunk == maxseq){
+                                isFileCompleted = true;
+                                showMessage("all part received");
+                            }
+                            console.log("isFileCompleted " + isFileCompleted);
+                        }
+                        else{
+                            console.log("chunk at "+(currentChunk+1)+" is null");
+                        }
+                        // writer.seek(seq*BYTES_PER_CHUNK);
+                        // writer.write(fileMatrix[seq]);
+                    }
+                    else{
+                        console.log("onwriteend called but file is null");
+                    }
+                    
+                    drawImageOnCanvas(fileMatrix[0].toURL());
+                }
+                if(seq == 0){
+                    writer.write(responseBlob);
+                    fileMatrix[0] = fileEntry;
+                }
+                else{
+                    fileMatrix[seq] = responseBlob;
+                    if(writer.readyState != 1){
+                        writer.onwriteend();
+                    }
+                }
+
+                
+            },function(error){
+                console.log("error when creating writer");
+            });                  
+        },function(err){
+            console.log("error when creating file");
+        });
+    },function(err){
+        console.log("error when requesting FS");
+    });
+};
 
 /**
  * Init and try to connect to server.
@@ -715,114 +779,31 @@ var getGeolocation = function() {
      */
     socket.on('uploadSuccess', function(data) {
         showMessage("Ready to receive!");
-
         downloadLink.href = data.fileURL;
         //downloadLink.click();
 
-        
         if(SLICE){
-            var tmpimg = new Image();
-            
-
             var seq = data.seq;
             var maxseq = data.maxseq;
+            var fileName = data.fileName;
+            initFileMatrix(maxseq);
+
             console.log(seq + "-" + maxseq);
-            console.log("isFileCompleted " + isFileCompleted);
-            if(isFileCompleted){
-                fileMatrix = new Array(maxseq+2);
-                for (var i = 0; i < maxseq+2; i++) {
-                    fileMatrix[i] = null;
-                };
-                currentChunk = 0;
-                isFileCompleted = false;
-            }
-            
-            
-            //console.log(BlobBuilder);
+
             var url = data.fileURL;
             url = url.replace(/download/,"file");
-            tmpimg.src = url;
 
             var xhr = new XMLHttpRequest();
             xhr.open('GET',url, true);
             xhr.responseType = 'blob';
-            xhr.onload = function(e){
-                window.requestFileSystem(TEMPORARY, 5*1024*1024, function(fs){
-                    fs.root.getFile(seq.toString(), {create:true},function(fileEntry){
-                        fileEntry.createWriter(function(writer){
-
-                            
-                            writer.onwriteend = function(){
-                                if(fileMatrix[0]){
-                                    if(fileMatrix[currentChunk+1]){
-                                        // fileMatrix[0].createWriter(function(fileWriter) {
-                                        //             fileWriter.seek(fileWriter.length);
-                                        //             fileWriter.write(fileMatrix[currentChunk+1]);
-                                        //             currentChunk++;
-                                        // },function(e){console.log("error");});
-                                        // fileMatrix[currentChunk+1].file(function(file){
-                                        //     var reader = new FileReader();
-                                        //     reader.onloadend = function(e) {
-                                        //         writer.seek(writer.length);
-                                        //         console.log(this.result);
-                                        //         writer.write(this.result);
-                                        //         currentChunk++;
-                                        //     };
-                                        //     reader.readAsText(file);
-                                        // },function(e){});
-                                        writer.seek(writer.length);
-                                        writer.write(fileMatrix[currentChunk+1]);
-                                        currentChunk++;
-                                    }
-                                }
-                                else{
-                                    console.log("called but file is null");
-                                }
-                                console.log("currentChunk: " + currentChunk);
-                                if(currentChunk == maxseq+1){
-                                    fileMatrix = true;
-                                }
-                                console.log(fileMatrix[0]);
-                                tmpimg.src = fileMatrix[0].toURL();
-                                tmpimg.onload = function(){
-                                    imgWidth = 400;
-                                    imgHeight = 400;
-                                    context.drawImage(tmpimg,0,400*seq,imgWidth,imgHeight);
-                                }
-                            }
-                            if(seq == 0){
-                                writer.write(xhr.response);
-                                fileMatrix[0] = fileEntry;
-                            }
-                            else{
-                                //write is only called once because no write() is called here
-                                fileMatrix[seq] = xhr.response;
-                            }
-                            
-                        },function(error){
-                            console.log("error when creating writer");
-                        });                  
-                    },function(err){
-                        console.log("error when creating file");
-                    });
-                },function(err){
-                    console.log("error when requesting FS");
-                });
-            };
+            xhr.onload = function(){
+                regroupSlicedFile(xhr.response,seq,maxseq, fileName);
+            }
             xhr.send();
   
         }
         else{
-            var tmpimg = new Image();
-            tmpimg.src = data.fileURL;
-
-            tmpimg.onload = function(){
-                imgWidth = 400;     
-                imgHeight = 400;
-                context.drawImage(tmpimg,0,0,imgWidth,imgHeight);
-                //setMouseEvent();
-                //url.revokeObjectURL(src);
-            }
+            drawImageOnCanvas(data.fileURL);
         }
     });
 
