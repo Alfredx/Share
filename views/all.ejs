@@ -2,34 +2,44 @@
 <html>
 <head>
     <title>Share - <%= title %></title>
-    <link rel='stylesheet' href='/stylesheets/style.css'/>
-    <!-- <script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
 </head>
 <body>
-    <h1>Share - <%= title %></h1>
-    <form action="/upload" enctype="multipart/form-data" method="post">
-        <!-- uncomment the "Multiple files" verison
-        <input type="file" name="upload" id="sendFile" multiple/>
-        -->
-        <input type="file" name="upload" id="sendFile"/>
-        <output id="selectedList">
-            <ul></ul>
-        </output>
-        <button type="button" id="sendButton" disabled>Send</button>
-        <button type="button" id="receiveButton">Receive</button>
-        <button type="button" id="pairButton">Pair</button>
-        <button type="button" id="pairSendButton">PSend</button>
-    </form>
+    <div class"page-header">
+        <h1>Share - <%= title %></h1>
+    </div>
+    <div class="hero-unit">
+        <p>
+            <form class="form-horizontal" action="/upload" enctype="multipart/form-data" method="post">
+                <!-- uncomment the "Multiple files" verison
+                <input type="file" name="upload" id="sendFile" multiple/>
+                -->
+                <input class="input-large" type="file" name="upload" id="sendFile"/>
+                <output id="selectedList">
+                    <ul></ul>
+                </output>
+                <div class="btn-group">
+                    <button class="btn-large" type="button" id="sendButton" disabled>Send</button>
+                    <button class="btn-large" type="button" id="receiveButton">Receive</button>
+                    <button class="btn-large" type="button" id="pairButton">Pair</button>
+                    <button class="btn-large" type="button" id="pairSendButton">PSend</button>
+                </div>
+            </form>
+        </p>
+    </div>
     <progress value="1" max="100" hidden id="uploadProgress"></progress>
     <p id="status">
     </p>
     <a href="" id="downloadLink" hidden>Download</a>
 
-    <canvas id="canvas" width="800" height="600"/>
+    <canvas id="canvas" class="media" width="600" height="400"/>
     <!-- for socket.io -->
     <script type="text/javascript" src="/javascripts/socket.io.min.js"></script>
     <!-- for Share -->
     <script type="text/javascript" src="/javascripts/utils.js"></script>
     <script type="text/javascript" src="/javascripts/all.js"></script>
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="js/bootstrap.min.js"></script>
 </body>
 </html>

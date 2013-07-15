@@ -109,6 +109,7 @@ var BYTES_PER_CHUNK = 1024*50;
   */
  var isFileCompleted = true;
  var isFileSent = false;
+ var isFileDownloading = false;
 
 /**
  *  File Matrix. To save all the chunks received
@@ -118,6 +119,8 @@ var fileMatrix = null;
 
 
 var currentChunk = 0;
+
+var TESTSWITCH = true;
 
 
 window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;
@@ -217,10 +220,12 @@ var setMouseEvent = function(){
     };
 
     function isMouseInSendArea(){
-        if((canMouseX <= 100) || (canMouseX >= canvas.width-100))
-            return true;
-        else
-            return false;
+        // if((canMouseX <= 100) || (canMouseX >= canvas.width-100))
+        //     return true;
+        // else
+        //     return false;
+        var result = (imgX+img.width) > canvas.width
+        return result;
     }
 
     function isImgInCanvas(){
@@ -247,15 +252,13 @@ var setMouseEvent = function(){
         canMouseY = parseInt(event.layerY);
         isDragging = false;
         isDraggable = false;
-        if(isMouseInSendArea())
-            pairToSend(socket);
     };
 
     function onMouseOut(event){
         canMouseX = parseInt(event.layerX);
         canMouseY = parseInt(event.layerY);
-        if(isMouseInSendArea() && isDragging)
-            pairToSend(socket);
+        // if(isMouseInSendArea() && isDragging)
+        //     pairToSend(socket);
         isDragging = false;
         isDraggable = false;
     };
@@ -273,6 +276,10 @@ var setMouseEvent = function(){
         if(isDragging){
             canvas.width = canvas.width;
             context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
+            var okToSend = isMouseInSendArea() && !isFileSent;
+            if(okToSend){
+                pairToSend(socket);
+            }
             sendImageCoords(socket,canMouseX-imgOffsetX-canvas.width,canMouseY-imgOffsetY);
             //console.log(canMouseX + " " +canMouseY);
         }
@@ -293,8 +300,8 @@ var setMouseEvent = function(){
         // canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         isDragging = false;
         isDraggable = false;
-        if(isMouseInSendArea())
-            pairToSend(socket);
+        // if(isMouseInSendArea())
+        //     pairToSend(socket);
 
     };
 
@@ -312,6 +319,10 @@ var setMouseEvent = function(){
         if(isDragging){
             canvas.width = canvas.width;
             context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
+            var okToSend = isMouseInSendArea() && !isFileSent;
+            if(okToSend){
+                pairToSend(socket);
+            }
             sendImageCoords(socket,canMouseX-imgOffsetX-canvas.width,canMouseY-imgOffsetY);
         }
     };
@@ -448,6 +459,14 @@ var pairedSend = function(socket){
  * @param  {Number} conID     The ID of the connection.
  */
 var confirmToSend = function(socket, partnerID, fileName, fileSize, conID) {
+    if(TESTSWITCH){
+        socket.emit('confirmed', {
+            'connectionID': conID,
+            'myID': id,
+            'partnerID': partnerID
+        });
+        return;
+    }
     var hint = "Confirm to send '" + fileName + "' " +
                "(" + sh.sizeToString(fileSize) + ") " +
                "to user " + partnerID;
@@ -480,6 +499,14 @@ var confirmToSend = function(socket, partnerID, fileName, fileSize, conID) {
  * @param  {Number} conID     The ID of the connection.
  */
 var confirmToReceive = function(socket, partnerID, fileName, fileSize, conID) {
+    if(TESTSWITCH){
+        socket.emit('confirmed', {
+            'connectionID': conID,
+            'myID': id,
+            'partnerID': partnerID
+        });
+        return;
+    }
     var hint = "Confirm to receive '" + fileName + "' " +
                "(" + sh.sizeToString(fileSize) + ") " +
                "from user " + partnerID;
@@ -655,7 +682,7 @@ var initFileMatrix = function(maxseq) {
     }
 };
 
-var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName){
+var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     window.requestFileSystem(TEMPORARY, 5*1024*1024, function(fs){
         fs.root.getFile(fileName, {create:true},function(fileEntry){
             entry = fileEntry;
@@ -679,7 +706,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName){
                         else{
                             console.log("chunk at "+(currentChunk+1)+" is null");
                         }
-                        drawImageOnCanvas(fileMatrix[0].toURL(),0,0);
+                        //drawImageOnCanvas(fileMatrix[0].toURL(),0,0);
                     }
                     else{
                         console.log("onwriteend called but file is null");
