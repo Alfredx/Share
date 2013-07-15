@@ -27,6 +27,7 @@ var outputField = document.getElementById('selectedList');
 var sendButton = document.getElementById('sendButton');
 var receiveButton = document.getElementById('receiveButton');
 var pairButton = document.getElementById('pairButton');
+var pairSendButton = document.getElementById('pairSendButton');
 // progress bar for sharing
 var progressBar = document.getElementById('uploadProgress');
 // the <a> for downloading
@@ -99,20 +100,22 @@ var context = canvas.getContext('2d');
 
  var isPaired = false;
 
-const SLICE = true;
+var SLICE = true;
 
-const BYTES_PER_CHUNK = 1024*200;
+var BYTES_PER_CHUNK = 1024*50;
 
  /**
   * Show if all chunks are received
   */
  var isFileCompleted = true;
+ var isFileSent = false;
 
 /**
  *  File Matrix. To save all the chunks received
  *  @type {Array}
  */
 var fileMatrix = null;
+
 
 var currentChunk = 0;
 
@@ -141,7 +144,7 @@ fileField.addEventListener('change', function(evt) {
         f = files[idx];
         var url = window.URL || window.webkitURL;
         var src = url.createObjectURL(f);
-        drawImageOnCanvas(src);
+        drawImageOnCanvas(src,0,0);
 
         selectedFile = {};
         // only the following properties are common
@@ -164,6 +167,8 @@ fileField.addEventListener('change', function(evt) {
     }
     outputField.innerHTML = '<ul>' + output.join('') + "</ul>";
     sendButton.disabled = false;
+    isFileCompleted = false;
+    isFileSent = false;
 }, false);
 
 /**
@@ -171,15 +176,19 @@ fileField.addEventListener('change', function(evt) {
  *  @param f {Object} The file just selected
  *  NOTE: only image file can be showed in canvas
  */
-var drawImageOnCanvas = function(src){
+var drawImageOnCanvas = function(src,x,y){
     //show in canvas;
+    
     img = new Image();
     img.src = src;
 
     img.onload = function(){
         imgWidth = 400;
         imgHeight = img.height*(imgWidth/img.width);
-        context.drawImage(img,0,0,imgWidth,imgHeight);
+        // context.clearRect(0,0,canvas.width,canvas.height);
+        canvas.width = canvas.width;
+        if(x+imgWidth > 0)
+            context.drawImage(img,x,y,imgWidth,imgHeight);
         setMouseEvent();
         
     }
@@ -264,6 +273,7 @@ var setMouseEvent = function(){
         if(isDragging){
             canvas.width = canvas.width;
             context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
+            sendImageCoords(socket,canMouseX-imgOffsetX-canvas.width,canMouseY-imgOffsetY);
             //console.log(canMouseX + " " +canMouseY);
         }
     };
@@ -302,6 +312,7 @@ var setMouseEvent = function(){
         if(isDragging){
             canvas.width = canvas.width;
             context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
+            sendImageCoords(socket,canMouseX-imgOffsetX-canvas.width,canMouseY-imgOffsetY);
         }
     };
 
@@ -326,6 +337,17 @@ var setMouseEvent = function(){
     canvas.addEventListener("touchcanvel", onTouchCancel, false);
 
 }
+
+var sendImageCoords = function(socket,x,y) {
+    if(!isFileSent)
+        return;
+    socket.emit('imageCoords', {
+        'sender':id,
+        'conID':gConID,
+        'X':x,
+        'Y':y
+    })
+};
 
 /**
  *  Try to find a pair but not send files
@@ -399,6 +421,22 @@ var pairToReceive = function(socket) {
     });
     showMessage("Finding someone nearby to send files.. [me]" + id);
 };
+
+var pairedSend = function(socket){
+    socket.emit('partnerEcho', {
+        'id':id,
+        'conID':gConID,
+        'partnerID':gPartnerID
+    });
+    // if(isPaired){
+    //     alert(id+" "+gPartnerID);
+    //     onStartSending(socket,gConID,id,gPartnerID);
+    // }
+    // else{
+    //     showMessage("you don't have a partner yet");
+    // }
+
+}
 
 
 /**
@@ -490,6 +528,7 @@ var onStartSending = function(socket, conID, senderID, receiverID) {
     }
 };
 
+
 var sendAsOneFile = function(socket, conID){
     //send files wrapped in a FormData using XHR2
     var xhr = new XMLHttpRequest();
@@ -527,15 +566,13 @@ var sliceAndSend = function(conID) {
     
     var blob = selectedFile['handle'];
     
-    const SIZE = blob.size;
+    var SIZE = blob.size;
 
     var seq = 0;
     var start = 0;
     var end = BYTES_PER_CHUNK;
-    var increasement = BYTES_PER_CHUNK/20;
 
-    const MAXSEQ = parseInt(SIZE/BYTES_PER_CHUNK)
-    //var MAXSEQ = 8;
+    var MAXSEQ = parseInt(SIZE/BYTES_PER_CHUNK)
 
     while(start < SIZE) {
         if('mozSlice' in blob){
@@ -553,6 +590,7 @@ var sliceAndSend = function(conID) {
         fd.append('uploadedChunk',chunk);
         fd.append('seq',seq);
         fd.append('maxseq',MAXSEQ);
+        fd.append('sender',id);
 
         uploadAChunk(fd,seq++,conID);
 
@@ -560,8 +598,8 @@ var sliceAndSend = function(conID) {
         end = start + BYTES_PER_CHUNK;
         if(end > SIZE)
             end = SIZE;
-        increasement *= 2;
     }
+    isFileSent = true;
 }
 
 var uploadAChunk = function(chunk, seq, conID) {
@@ -591,6 +629,7 @@ var getGeolocation = function() {
             'longitude': pos.coords.longitude,
             'accuracy': pos.coords.accuracy
         };
+
     };
     var onError = function(err) {
         var errors = {
@@ -619,54 +658,53 @@ var initFileMatrix = function(maxseq) {
 var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName){
     window.requestFileSystem(TEMPORARY, 5*1024*1024, function(fs){
         fs.root.getFile(fileName, {create:true},function(fileEntry){
+            entry = fileEntry;
             fileEntry.createWriter(function(writer){
-                writer.onwriteend = function(){
+                filewriter = writer;
+                filewriter.onwriteend = function(){
                     if(fileMatrix[0]){
                         if(fileMatrix[currentChunk+1]){
                             console.log("currentChunk: " + currentChunk);
-                            console.log("length: "+writer.length);
-                            writer.seek(writer.length);
-                            writer.write(fileMatrix[currentChunk+1]);
+                            console.log("length: "+filewriter.length);
+                            filewriter.seek(filewriter.length);
+                            filewriter.write(fileMatrix[currentChunk+1]);
                             currentChunk++;
                             if(currentChunk == maxseq){
                                 isFileCompleted = true;
                                 showMessage("all part received");
+                                filewriter = null;
                             }
                             console.log("isFileCompleted " + isFileCompleted);
                         }
                         else{
                             console.log("chunk at "+(currentChunk+1)+" is null");
                         }
-                        // writer.seek(seq*BYTES_PER_CHUNK);
-                        // writer.write(fileMatrix[seq]);
+                        drawImageOnCanvas(fileMatrix[0].toURL(),0,0);
                     }
                     else{
                         console.log("onwriteend called but file is null");
                     }
-                    
-                    drawImageOnCanvas(fileMatrix[0].toURL());
-                }
+                };
                 if(seq == 0){
-                    writer.write(responseBlob);
+                    filewriter.write(responseBlob);
                     fileMatrix[0] = fileEntry;
                 }
                 else{
                     fileMatrix[seq] = responseBlob;
-                    if(writer.readyState != 1){
-                        writer.onwriteend();
+                    if(filewriter.readyState != 1){
+                        filewriter.onwriteend();
                     }
                 }
-
-                
             },function(error){
                 console.log("error when creating writer");
-            });                  
+            });  
         },function(err){
-            console.log("error when creating file");
+            console.log("error when creating file: " + fileName);
         });
     },function(err){
         console.log("error when requesting FS");
     });
+
 };
 
 /**
@@ -724,6 +762,8 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName){
      * @param  {Object} data A JSON object that contains multiple info.
      */
     socket.on('confirmSend', function(data) {
+        gConID = data.connectionID;
+        gPartnerID = data.partnerID;
         confirmToSend(socket, data.partnerID, data.fileName, data.fileSize, data.connectionID);
     });
 
@@ -803,7 +843,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName){
   
         }
         else{
-            drawImageOnCanvas(data.fileURL);
+            drawImageOnCanvas(data.fileURL,0,0);
         }
     });
 
@@ -812,6 +852,10 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName){
      */
     socket.on('uploadFailed', function(data) {
         showMessage("Uploading failed...");
+    });
+
+    socket.on('imageCoords', function(data) {
+        drawImageOnCanvas(fileMatrix[0].toURL(),data.X,data.Y);
     });
     
     /**
@@ -836,5 +880,9 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName){
     pairButton.onclick = function() {
         findPair(socket);
     };
+
+    pairSendButton.onclick = function() {
+        //pairedSend();
+    }
 
 })();

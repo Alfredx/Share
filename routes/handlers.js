@@ -324,6 +324,31 @@ var initSocket = function(socket) {
     socket.on('findPair', function(data) {
         onFindPair(socket, data.id, data.geo);
     });
+
+    socket.on('partnerEcho', function(data){
+        var senderID = data.id;
+        var conID = data.conID;
+        var partnerID = data.partnerID;
+
+    });
+
+    socket.on('imageCoords', function(data) {
+        var senderID = data.sender;
+        var conID = data.conID;
+        var con = paired.get(conID);
+        if(senderID === con.sender.id){
+            con.receiver.socket.emit('imageCoords', {
+                'X':data.X,
+                'Y':data.Y
+            })
+        }
+        else{
+            con.sender.socket.emit('imageCoords', {
+                'X':data.X,
+                'Y':data.Y
+            })
+        }
+    });
 };
 
 /**
@@ -382,21 +407,32 @@ exports.upload = function(req, res) {
     var f = req.files[Object.keys(req.files)[0]];
     var seq = req.body.seq;
     var maxseq = req.body.maxseq;
+    var senderID = req.body.sender;
     con.setMat(maxseq);
     con.setArrive(seq);
     var url = '/download?path=' + encodeURIComponent(f.path) +
               '&name=' + encodeURIComponent(con.sender.fileName);
-    con.receiver.socket.emit('uploadSuccess', {
-        'fileURL': url,
-        'seq': seq,
-        'maxseq': maxseq,
-        'fileName': con.sender.fileName
-    });
-    if(con.isFinished()){
-        setTimeout(function(){
-            paired.clear(conID);
-        },1000);
+    if(senderID === con.receiver.id){
+        con.sender.socket.emit('uploadSuccess', {
+            'fileURL': url,
+            'seq': seq,
+            'maxseq': maxseq,
+            'fileName': con.sender.fileName
+        });
     }
+    else{
+        con.receiver.socket.emit('uploadSuccess', {
+            'fileURL': url,
+            'seq': seq,
+            'maxseq': maxseq,
+            'fileName': con.sender.fileName
+        });
+    }
+    // if(con.isFinished()){
+    //     setTimeout(function(){
+    //         paired.clear(conID);
+    //     },1000);
+    // }
     
     res.send(200);
 };
