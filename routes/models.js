@@ -269,7 +269,7 @@ var Connection = function() {
      *  Sequence Matrix, using which to tell all the chunks are sent
      *  @type {Array}
      */
-    this.seqMat;
+    this.seqMat = null;
 
     /**
      *  To set one sequence number as true, means this chunk is sent
@@ -303,6 +303,55 @@ var Connection = function() {
                 return false;
         }
         return true;
+    }
+
+    //refactor
+
+    /**
+     *  @type   {Object}
+     */
+    this.clients = new Array(2);
+
+    /**
+     *  @type   {Boolean}
+     */
+    this.clientsConfirmed = new Array(2);
+
+    this.setClients = function(user1, user2){
+        this.clients[0] = user1;
+        this.clients[1] = user2;
+        this.clientsConfirmed[0] = false;
+        this.clientsConfirmed[1] = false;
+        //向旧版兼容
+        this.sender = user1;
+        this.receiver = user2;
+        this.senderConfirmed = false;
+        this.receiverConfirmed = false;
+    }
+
+    this.userConfirmed = function(userID) {
+        var legal = this.clients[0].id === userID || this.clients[1].id === userID;
+        if(!legal)
+            return null;
+        if(this.clients[0].id === userID)
+            this.clientsConfirmed[0] = true;
+        else
+            this.clientsConfirmed[1] = true;
+        return true;
+    }
+
+    this.isBothConfirmed = function() {
+        return this.clientsConfirmed[0] && this.clientsConfirmed[1];
+    }
+
+    this.getTheOther = function(userID){
+        var legal = this.clients[0] && this.clients[1] && (this.clients[0].id === userID || this.clients[1].id === userID);
+        if(!lagal)
+            return null;
+        if(this.clients[0].id === userID)
+            return this.clients[1];
+        else
+            return this.clients[0];
     }
 };
 
@@ -363,13 +412,7 @@ var Pairs = function() {
         var receiver = con.receiver;
 
         if (fromUserID) {
-            if (fromUserID === sender.id) {
-                // from sender, tell receiver
-                callback(receiver);
-            } else {
-                // from receiver, tell sender
-                callback(sender);
-            }
+            callback(con.getTheOther(fromUserID));
         }
 
         delete this._connections[conID];
@@ -388,8 +431,7 @@ var Pairs = function() {
 
         var con = new Connection();
         con.id = conID;
-        con.sender = sender;
-        con.receiver = receiver;
+        con.setClients(sender,receiver);
 
         delete this._indices[sender.id];
         delete this._indices[receiver.id];
@@ -411,20 +453,9 @@ var Pairs = function() {
         if (!(conID in this._connections)) {
             return false;
         }
-
         var con = this._connections[conID];
-        var sender = con.sender;
-        var receiver = con.receiver;
-
-        if (sender.id === userID) {
-            // is the sender
-            con.senderConfirmed = true;
-        } else {
-            // is the receiver
-            con.receiverConfirmed = true;
-        }
-
-        return con.senderConfirmed && con.receiverConfirmed;
+        con.userConfirmed(userID);
+        return con.isBothConfirmed();
     };
 
     /**
