@@ -80,17 +80,19 @@ var Users = function() {
 
     };
 
+    this.add = function(user){
+        this._store[user.id] = user;
+    }
+
+    this.get = function(userID){
+        return this._store[userID];
+    }
     /**
      * The timeout for making a pair. In milliseconds.
      * @type {Number}
      */
     var TIMEOUT = 10000;
 
-    /**
-     *  The largest legal geo distance(Meter) of two users
-     *  @type {Number}
-     */
-    var MAXDISTANCE = 50.0;
 
     /**
      * Add the user into this store for TIMEOUT milliseconds.
@@ -112,6 +114,11 @@ var Users = function() {
         }, TIMEOUT);
     };
 
+    /**
+     *  The largest legal geo distance(Meter) of two users
+     *  @type {Number}
+     */
+    var MAXDISTANCE = 50.0;
     /**
      * Given a baseUser, find the nearest user.
      * @param  {Object} baseUser The user to be compared.
@@ -154,30 +161,21 @@ var Users = function() {
     this.geoDistance = function(lat1, lng1, lat2, lng2){
         var f = this.getRad((lat1 + lat2)/2);
         var g = this.getRad((lat1 - lat2)/2);
-        var l = this.getRad((lng1 - lng2)/2);
-        
+        var l = this.getRad((lng1 - lng2)/2);       
         var sg = Math.sin(g);
         var sl = Math.sin(l);
-        var sf = Math.sin(f);
-        
+        var sf = Math.sin(f);        
         var s,c,w,r,d,h1,h2;
         var a = 6378137.0;  
-        var fl = 1/298.257;
-        
-        sg = sg*sg;
-        sl = sl*sl;
-        sf = sf*sf;
-        
+        var fl = 1/298.257;        
+        sg = sg*sg;        sl = sl*sl;        sf = sf*sf;        
         s = sg*(1-sl) + (1-sf)*sl;
         c = (1-sg)*(1-sl) + sf*sl;
-        
-
         w = Math.atan(Math.sqrt(s/c));
         r = Math.sqrt(s*c)/w;
         d = 2*w*a;
         h1 = (3*r -1)/2/c;
-        h2 = (3*r +1)/2/s;
-        
+        h2 = (3*r +1)/2/s;        
         return d*(1 + fl*(h1*sf*(1-sg) - h2*(1-sf)*sg));
     };
 
@@ -188,6 +186,28 @@ var Users = function() {
     this.userIDs = function() {
         return Object.keys(this._store);
     };
+
+    var DISCONNECTTIMEOUT = 120000;
+
+    /**
+     *  When a user disconnected, this function will be called and return a timer 
+     *  to wait for the user reconnecting. If in 2mins he still didn't reconnect,
+     *  the user will be deleted, otherwise this timer will be cleared
+     *  @param  {Number}    userID
+     *  @param  {function}  callback    to handle the deletion of the user
+     *  @return {Object}    timer       
+     */
+    this.disconnectTimer = function(userID, callback) {
+        var store = this._store;
+        var timer = setTimeout( function(){
+            if(userID in store){
+                var u = store[userID];
+                callback(u);
+                delete store[userID];
+            }
+        },DISCONNECTTIMEOUT);
+        return timer;
+    }
 };
 
 

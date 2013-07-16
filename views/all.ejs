@@ -6,31 +6,27 @@
     <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
 </head>
 <body>
-    <div class"page-header">
+    <div class"hero-unit">
         <h1>Share - <%= title %></h1>
-    </div>
-    <div class="hero-unit">
-        <p>
-            <form class="form-horizontal" action="/upload" enctype="multipart/form-data" method="post">
-                <!-- uncomment the "Multiple files" verison
-                <input type="file" name="upload" id="sendFile" multiple/>
-                -->
-                <input class="input-large" type="file" name="upload" id="sendFile"/>
-                <output id="selectedList">
-                    <ul></ul>
-                </output>
-                <div class="btn-group">
-                    <button class="btn-large" type="button" id="sendButton" disabled>Send</button>
-                    <button class="btn-large" type="button" id="receiveButton">Receive</button>
-                    <button class="btn-large" type="button" id="pairButton">Pair</button>
-                    <button class="btn-large" type="button" id="pairSendButton">PSend</button>
-                </div>
-            </form>
+        <form class="form-horizontal" action="/upload" enctype="multipart/form-data" method="post">
+            <!-- uncomment the "Multiple files" verison
+            <input type="file" name="upload" id="sendFile" multiple/>
+            -->
+            <input class="input-large" type="file" name="upload" id="sendFile"/>
+            <output id="selectedList">
+                <ul></ul>
+            </output>
+            <div class="btn-group">
+                <button class="btn-large" type="button" id="sendButton" disabled>Send</button>
+                <button class="btn-large" type="button" id="receiveButton">Receive</button>
+                <button class="btn-large" type="button" id="pairButton">Pair</button>
+                <button class="btn-large" type="button" id="pairSendButton">PSend</button>
+            </div>
+        </form>
+        <progress value="1" max="100" hidden id="uploadProgress"></progress>
+        <p id="status">
         </p>
     </div>
-    <progress value="1" max="100" hidden id="uploadProgress"></progress>
-    <p id="status">
-    </p>
     <a href="" id="downloadLink" hidden>Download</a>
 
     <canvas id="canvas" class="media" width="600" height="400"/>
@@ -42,4 +38,4 @@
     <script src="http://code.jquery.com/jquery.js"></script>
     <script src="js/bootstrap.min.js"></script>
 </body>
-</html>
+</html> ,k 

@@ -34,12 +34,14 @@ var toReceive = new Users();
 
 var toPair = new Users();
 
+var allUsers = new Users();
+
 /**
  * Managing all the connections that have been paired.
  */
 var paired = new Pairs();
 
-
+var disconnectTimers = {};
 
 
 /**
@@ -248,6 +250,29 @@ var onConfirmed = function(conID, userID) {
     con.status = "SENDING";
 };
 
+var onNewConnection = function(socket, id, geo){
+    var user = new UserData();
+    user.id = id;
+    user.socket = socket;
+    user.ip = parseAddress(socket);
+    user.port = parsePort(socket);
+    if(geo){
+        user.geoLatitude = geo.latitude;
+        user.geoLongitude = geo.longitude;
+        user.geoAccuracy = geo.accuracy;
+    }
+    allUsers.add(user);
+    console.log('User connected.. [ID] ' + id + ' assigned');
+}
+
+var disconnectCallback = function(user){
+    toSend.clear(user.id);
+    toReceive.clear(user.id);
+    toPair.clear(user.id);
+    disconnectTimers[user.id] = null;
+    //TODO!! tell others this user has disconnected
+}
+
 
 /**
  * Init the socket.
@@ -255,10 +280,26 @@ var onConfirmed = function(conID, userID) {
  */
 var initSocket = function(socket) {
     // assign id for this connection
-    socketID++;
-    var assignedID = socketID;
-    socket.emit('setID', assignedID);
-    console.log('New user connected.. [ID] ' + assignedID + ' assigned');
+    var assignedID = ++socketID;
+    socket.emit('whoareyou',assignedID);
+
+    socket.on('iam', function(data) {
+        var timer = disconnectTimers[assignedID];
+        if(timer){
+            clearTimeout(timer);
+            disconnectTimers[assignedID] = null;
+            assignedID = data.id;
+            console.log('User reconnected.. [ID] ' + assignedID);
+        }
+        else{
+            socket.emit('IDexpired',assignedID);
+            onNewConnection(socket,assignedID,data.geo);
+        }
+    });
+
+    socket.on('newIDconfirmed', function(data){
+        onNewConnection(socket,data.id,data.geo);
+    });
 
     /**
      * Remove relative data in toSend and toReceive dictionary when disconnected.
@@ -267,6 +308,7 @@ var initSocket = function(socket) {
         toSend.clear(assignedID);
         toReceive.clear(assignedID);
         console.log('User disconnected.. [ID] ' + assignedID);
+        disconnectTimers[assignedID] = allUsers.disconnectTimer(assignedID,disconnectCallback);
     });
 
     /**

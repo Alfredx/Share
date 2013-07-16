@@ -779,10 +779,29 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
      * Set the unique id for this connection.
      * @param  {Number} data The ID to be set.
      */
-    socket.on('setID', function(data) {
+    socket.on('whoareyou', function(data) {
+        if(!id){
+            id = data;
+            showMessage('Connected, id is ' + data);
+        }
+        if (navigator.geolocation)
+            getGeolocation();
+        else
+           showMessage("Your browser does not support Geolocation");
+        socket.emit('iam', {
+            'id' : id,
+            'geo': geo
+        });
+    });
+
+    socket.on('IDexpired', function(data) {
         id = data;
         showMessage('Connected, id is ' + data);
-    });
+        socket.emit('newIDcomfirmed', {
+            'id':id,
+            'geo':geo
+        })
+    })
 
     /**
      * Successfully making a pair, confirm sending files to it?
@@ -889,12 +908,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
      * Try to get geolocation on initialization
      *
      */
-    if (navigator.geolocation) {
-        getGeolocation();
-    }
-    else{
-	   showMessage("Your browser does not support Geolocation");
-    }
+    
 
     sendButton.onclick = function() {
         pairToSend(socket);
