@@ -450,26 +450,33 @@ exports.upload = function(req, res) {
     var seq = req.body.seq;
     var maxseq = req.body.maxseq;
     var senderID = req.body.sender;
+    var fileName = req.body.fileName;
     con.setMat(maxseq);
-    con.setArrive(seq);
+    con.setArrive(seq,f.path);
     var url = '/download?path=' + encodeURIComponent(f.path) +
-              '&name=' + encodeURIComponent(con.sender.fileName);
-    if(senderID === con.receiver.id){
-        con.sender.socket.emit('uploadSuccess', {
+              '&name=' + encodeURIComponent(fileName);
+    con.getTheOther(senderID).socket.emit('uploadSuccess', {
             'fileURL': url,
             'seq': seq,
             'maxseq': maxseq,
-            'fileName': con.sender.fileName
-        });
-    }
-    else{
-        con.receiver.socket.emit('uploadSuccess', {
-            'fileURL': url,
-            'seq': seq,
-            'maxseq': maxseq,
-            'fileName': con.sender.fileName
-        });
-    }
+            'fileName': fileName
+    });
+    // if(senderID === con.receiver.id){
+    //     con.sender.socket.emit('uploadSuccess', {
+    //         'fileURL': url,
+    //         'seq': seq,
+    //         'maxseq': maxseq,
+    //         'fileName': con.sender.fileName
+    //     });
+    // }
+    // else{
+    //     con.receiver.socket.emit('uploadSuccess', {
+    //         'fileURL': url,
+    //         'seq': seq,
+    //         'maxseq': maxseq,
+    //         'fileName': con.sender.fileName
+    //     });
+    // }
     // if(con.isFinished()){
     //     setTimeout(function(){
     //         paired.clear(conID);

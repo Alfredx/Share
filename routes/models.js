@@ -269,14 +269,16 @@ var Connection = function() {
      *  Sequence Matrix, using which to tell all the chunks are sent
      *  @type {Array}
      */
-    this.seqMat = null;
+    this.seqArray = null;
+    this.pathArray = null;
 
     /**
      *  To set one sequence number as true, means this chunk is sent
      *  @param  {Number}    seq     the specified sequence number
      */
-    this.setArrive = function(seq){
-        this.seqMat[seq] = true;
+    this.setArrive = function(seq, path){
+        this.seqArray[seq] = true;
+        this.pathArray[seq] = path;
     }
 
     /**
@@ -287,10 +289,12 @@ var Connection = function() {
         if(this.maxseq)
             return;
         this.maxseq = max;
-        this.seqMat = new Array(this.maxseq);
+        this.seqArray = new Array(this.maxseq);
+        this.pathArray = new Array(this.maxseq);
         for (var i = 0; i < this.maxseq; i++) {
-            this.seqMat[i] = false;
-        };
+            this.seqArray[i] = false;
+            this.pathArray[i] = null;
+        }; 
     }
 
     /**
@@ -299,9 +303,10 @@ var Connection = function() {
      */
     this.isFinished = function() {
         for(var i = 0; i < this.maxseq; i++){
-            if(!this.seqMat[i])
+            if(!this.seqArray[i])
                 return false;
         }
+        this.maxseq = null;
         return true;
     }
 
@@ -345,10 +350,12 @@ var Connection = function() {
     }
 
     this.getTheOther = function(userID){
-        var legal = this.clients[0] && this.clients[1] && (this.clients[0].id === userID || this.clients[1].id === userID);
-        if(!lagal)
-            return null;
-        if(this.clients[0].id === userID)
+        // var legal = this.clients[0] && this.clients[1] && (this.clients[0].id === userID || this.clients[1].id === userID);
+        // if(!legal){
+        //     console.log("illegal!");
+        //     return null;
+        // }
+        if(this.clients[0].id == userID)    //these are not the same type
             return this.clients[1];
         else
             return this.clients[0];

@@ -28,6 +28,7 @@ var sendButton = document.getElementById('sendButton');
 var receiveButton = document.getElementById('receiveButton');
 var pairButton = document.getElementById('pairButton');
 var pairSendButton = document.getElementById('pairSendButton');
+var downloadButton = document.getElementById('downloadButton');
 // progress bar for sharing
 var progressBar = document.getElementById('uploadProgress');
 // the <a> for downloading
@@ -170,8 +171,9 @@ fileField.addEventListener('change', function(evt) {
     }
     outputField.innerHTML = '<ul>' + output.join('') + "</ul>";
     sendButton.disabled = false;
-    isFileCompleted = false;
+    isFileCompleted = true;
     isFileSent = false;
+    isFileDownloading = false;
 }, false);
 
 /**
@@ -189,9 +191,10 @@ var drawImageOnCanvas = function(src,x,y){
         imgWidth = 400;
         imgHeight = img.height*(imgWidth/img.width);
         // context.clearRect(0,0,canvas.width,canvas.height);
-        canvas.width = canvas.width;
-        if(x+imgWidth > 0)
+        canvas.height = img.height;
+        if(x+imgWidth > 0){
             context.drawImage(img,x,y,imgWidth,imgHeight);
+        }
         setMouseEvent();
         
     }
@@ -278,7 +281,7 @@ var setMouseEvent = function(){
             context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
             var okToSend = isMouseInSendArea() && !isFileSent;
             if(okToSend){
-                pairToSend(socket);
+                pairedSend(socket);
             }
             sendImageCoords(socket,canMouseX-imgOffsetX-canvas.width,canMouseY-imgOffsetY);
             //console.log(canMouseX + " " +canMouseY);
@@ -321,7 +324,7 @@ var setMouseEvent = function(){
             context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
             var okToSend = isMouseInSendArea() && !isFileSent;
             if(okToSend){
-                pairToSend(socket);
+                pairedSend(socket);
             }
             sendImageCoords(socket,canMouseX-imgOffsetX-canvas.width,canMouseY-imgOffsetY);
         }
@@ -434,18 +437,17 @@ var pairToReceive = function(socket) {
 };
 
 var pairedSend = function(socket){
-    socket.emit('partnerEcho', {
-        'id':id,
-        'conID':gConID,
-        'partnerID':gPartnerID
-    });
-    // if(isPaired){
-    //     alert(id+" "+gPartnerID);
-    //     onStartSending(socket,gConID,id,gPartnerID);
-    // }
-    // else{
-    //     showMessage("you don't have a partner yet");
-    // }
+    // socket.emit('partnerEcho', {
+    //     'id':id,
+    //     'conID':gConID,
+    //     'partnerID':gPartnerID
+    // });
+    if(isPaired){
+        onStartSending(socket,gConID,id,gPartnerID);
+    }
+    else{
+        showMessage("you don't have a partner yet");
+    }
 
 }
 
@@ -601,6 +603,11 @@ var sliceAndSend = function(conID) {
 
     var MAXSEQ = parseInt(SIZE/BYTES_PER_CHUNK)
 
+    var date = new Date();
+    date = date.toString();
+    date = date.replace(/ /g,"_");
+    date = date.replace(/:/g,"_");
+
     while(start < SIZE) {
         if('mozSlice' in blob){
             var chunk = blob.mozSlice(start, end);
@@ -618,6 +625,7 @@ var sliceAndSend = function(conID) {
         fd.append('seq',seq);
         fd.append('maxseq',MAXSEQ);
         fd.append('sender',id);
+        fd.append('fileName',date+selectedFile['name']);
 
         uploadAChunk(fd,seq++,conID);
 
@@ -700,6 +708,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
                                 isFileCompleted = true;
                                 showMessage("all part received");
                                 filewriter = null;
+                                //selectedFile = fileMatrix[0];
                             }
                             console.log("isFileCompleted " + isFileCompleted);
                         }
@@ -828,6 +837,9 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
         gConID = data.connectionID;
         gPartnerID = data.partnerID;
         isPaired = true;
+        isFileCompleted = true;
+        isFileSent = false;
+        console.log('1111111111111111111111111');
         showMessage("Succeeded on making pair with [user:] " + data.partnerID);
     });
 
@@ -874,6 +886,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
             var fileName = data.fileName;
             initFileMatrix(maxseq);
 
+            console.log(fileName);
             console.log(seq + "-" + maxseq);
 
             var url = data.fileURL;
@@ -923,7 +936,11 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     };
 
     pairSendButton.onclick = function() {
-        //pairedSend();
+        pairedSend();
+    }
+
+    downloadButton.onclick = function() {
+        downloadLink.click();
     }
 
 })();
