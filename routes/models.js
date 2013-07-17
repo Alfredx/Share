@@ -225,16 +225,8 @@ var FileRegrouper = function(id1, id2) {
         this.path = senderID + "_" +this.ids[0]+"_"+this.ids[1];
         this.path = pathArray[0].replace(/\\/,"\\"+this.path);
         for (var i = 0; i < length; i++) {
-            // fs.readFileSync(pathArray[i], function(err, data) {
-            //     if(err) throw err;
-            //     fs.appendFileSync(this.path, data, function(err) {
-            //         if(err) throw err;
-            //         console.log("file part "+i+"appended");
-            //     });
-            // });
             var data = fs.readFileSync(pathArray[i]);
             fs.appendFileSync(this.path,data);
-            console.log("file part "+i+"appended");
         };
         return this.path;
     }

@@ -371,7 +371,6 @@ var initSocket = function(socket) {
         var senderID = data.id;
         var conID = data.conID;
         var partnerID = data.partnerID;
-
     });
 
     socket.on('imageCoords', function(data) {
@@ -453,11 +452,20 @@ exports.upload = function(req, res) {
     var fileName = req.body.fileName;
     con.setMat(maxseq);
     con.setArrive(seq,f.path);
+    var theOther = con.getTheOther(senderID);
+
+    if(con.isFinished()){
+        var downloadURL = con.regroup(senderID);
+        downloadURL = '/download?path=' + encodeURIComponent(downloadURL) +
+                        '&name=' + encodeURIComponent(fileName);
+        console.log(downloadURL);
+        theOther.socket.emit('downloadLink', downloadURL);
+    }
 
     var url = '/download?path=' + encodeURIComponent(f.path) +
               '&name=' + encodeURIComponent(fileName);
 
-    var theOther = con.getTheOther(senderID);
+    
     theOther.socket.emit('uploadSuccess', {
             'fileURL': url,
             'seq': seq,
@@ -467,12 +475,7 @@ exports.upload = function(req, res) {
 
     res.send(200);
 
-    if(con.isFinished()){
-        var downloadURL = con.regroup(senderID);
-        downloadURL = '/download?path=' + encodeURIComponent(downloadURL) +
-                        '&name=' + encodeURIComponent(fileName);
-        theOther.socket.emit('downloadLink', downloadURL);
-    }
+    
 };
 
 

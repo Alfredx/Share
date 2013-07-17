@@ -540,9 +540,10 @@ var confirmToReceive = function(socket, partnerID, fileName, fileSize, conID) {
  * @param  {Number} receiverID The ID of the receiver.
  */
 var onStartSending = function(socket, conID, senderID, receiverID) {
+    if(!selectedFile)
+        return;
     if (id === senderID) {
         // self is the sender
-        assert(selectedFile !== null);
         if(SLICE){
             sliceAndSend(conID);
         }
@@ -690,45 +691,49 @@ var initFileMatrix = function(maxseq) {
     }
 };
 
+var writeNextChunk = function(filewriter,maxseq) {
+    filewriter.seek(filewriter.length);
+    filewriter.write(fileMatrix[currentChunk+1]);
+    currentChunk++;
+    if(currentChunk == maxseq){
+        isFileCompleted = true;
+        showMessage("all part received");
+        //selectedFile = fileMatrix[0];
+    }
+}
+
 var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     window.requestFileSystem(TEMPORARY, 5*1024*1024, function(fs){
         fs.root.getFile(fileName, {create:true},function(fileEntry){
             entry = fileEntry;
             fileEntry.createWriter(function(writer){
-                filewriter = writer;
-                filewriter.onwriteend = function(){
+                writer.onwriteend = function(){
                     if(fileMatrix[0]){
                         if(fileMatrix[currentChunk+1]){
-                            // console.log("currentChunk: " + currentChunk);
-                            // console.log("length: "+filewriter.length);
-                            filewriter.seek(filewriter.length);
-                            filewriter.write(fileMatrix[currentChunk+1]);
-                            currentChunk++;
-                            if(currentChunk == maxseq){
-                                isFileCompleted = true;
-                                showMessage("all part received");
-                                filewriter = null;
-                                //selectedFile = fileMatrix[0];
+
+                            if(writer.readyState == 1){
+                                setTimeout(function(){
+                                    if(writer.readyState == 1){
+                                        setTimeout(function(){
+                                            writeNextChunk(writer,maxseq);
+                                        },500);
+                                    }
+                                    writeNextChunk(writer,maxseq);
+                                },500)
                             }
-                            // console.log("isFileCompleted " + isFileCompleted);
+
+                            writeNextChunk(writer,maxseq);
                         }
-                        // else{
-                        //     console.log("chunk at "+(currentChunk+1)+" is null");
-                        // }
-                        //drawImageOnCanvas(fileMatrix[0].toURL(),0,0);
                     }
-                    // else{
-                    //     console.log("onwriteend called but file is null");
-                    // }
                 };
                 if(seq == 0){
-                    filewriter.write(responseBlob);
+                    writer.write(responseBlob);
                     fileMatrix[0] = fileEntry;
                 }
                 else{
                     fileMatrix[seq] = responseBlob;
-                    if(filewriter.readyState != 1){
-                        filewriter.onwriteend();
+                    if(writer.readyState != 1){
+                        writer.onwriteend();
                     }
                 }
             },function(error){
@@ -876,8 +881,6 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
      */
     socket.on('uploadSuccess', function(data) {
         showMessage("Ready to receive!");
-        downloadLink.href = data.fileURL;
-        //downloadLink.click();
 
         if(SLICE){
             var seq = data.seq;
@@ -915,7 +918,6 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
 
     socket.on('downloadLink', function(data) {
         downloadLink.href = data;
-        console.log(downloadLink);
     })
     
     /**
@@ -941,6 +943,8 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     }
 
     downloadButton.onclick = function() {
+        if(downloadLink.href === null)
+            return;
         downloadLink.click();
     }
 
