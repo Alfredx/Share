@@ -3,6 +3,7 @@
  */
 var fs = require('fs');
 
+
 /**
  * Containing all the information of a user.
  */
@@ -223,11 +224,14 @@ var FileRegrouper = function(id1, id2) {
         if(!length)
             return null;
         this.path = senderID + "_" +this.ids[0]+"_"+this.ids[1];
+        console.log(this.path);
         this.path = pathArray[0].replace(/\\/,"\\"+this.path);
+        console.log(this.path);
         for (var i = 0; i < length; i++) {
             var data = fs.readFileSync(pathArray[i]);
             fs.appendFileSync(this.path,data);
         };
+        console.log(this.path);
         return this.path;
     }
 
