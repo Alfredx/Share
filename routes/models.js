@@ -1,6 +1,7 @@
 /*
  * Define the data models used in this project.
  */
+var fs = require('fs');
 
 /**
  * Containing all the information of a user.
@@ -210,6 +211,36 @@ var Users = function() {
     }
 };
 
+var FileRegrouper = function(id1, id2) {
+    this.ids = new Array(2);
+    this.ids[0] = id1;
+    this.ids[1] = id2;
+
+    this.path = null;
+
+    this.regroup = function(senderID, pathArray) {
+        var length = pathArray.length;
+        if(!length)
+            return null;
+        this.path = senderID + "_" +this.ids[0]+"_"+this.ids[1];
+        this.path = pathArray[0].replace(/\\/,"\\"+this.path);
+        for (var i = 0; i < length; i++) {
+            // fs.readFileSync(pathArray[i], function(err, data) {
+            //     if(err) throw err;
+            //     fs.appendFileSync(this.path, data, function(err) {
+            //         if(err) throw err;
+            //         console.log("file part "+i+"appended");
+            //     });
+            // });
+            var data = fs.readFileSync(pathArray[i]);
+            fs.appendFileSync(this.path,data);
+            console.log("file part "+i+"appended");
+        };
+        return this.path;
+    }
+
+}
+
 
 /**
  * Containing the necessary for a paired connection.
@@ -272,6 +303,8 @@ var Connection = function() {
     this.seqArray = null;
     this.pathArray = null;
 
+    this.regrouper = null;
+
     /**
      *  To set one sequence number as true, means this chunk is sent
      *  @param  {Number}    seq     the specified sequence number
@@ -295,6 +328,7 @@ var Connection = function() {
             this.seqArray[i] = false;
             this.pathArray[i] = null;
         }; 
+        this.regrouper = new FileRegrouper(this.clients[0].id,this.clients[1].id);
     }
 
     /**
@@ -308,6 +342,10 @@ var Connection = function() {
         }
         this.maxseq = null;
         return true;
+    }
+
+    this.regroup = function(senderID) {
+        return this.regrouper.regroup(senderID,this.pathArray);
     }
 
     //refactor
@@ -361,6 +399,8 @@ var Connection = function() {
             return this.clients[0];
     }
 };
+
+
 
 
 /**

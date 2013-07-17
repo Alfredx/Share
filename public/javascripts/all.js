@@ -699,8 +699,8 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
                 filewriter.onwriteend = function(){
                     if(fileMatrix[0]){
                         if(fileMatrix[currentChunk+1]){
-                            console.log("currentChunk: " + currentChunk);
-                            console.log("length: "+filewriter.length);
+                            // console.log("currentChunk: " + currentChunk);
+                            // console.log("length: "+filewriter.length);
                             filewriter.seek(filewriter.length);
                             filewriter.write(fileMatrix[currentChunk+1]);
                             currentChunk++;
@@ -710,16 +710,16 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
                                 filewriter = null;
                                 //selectedFile = fileMatrix[0];
                             }
-                            console.log("isFileCompleted " + isFileCompleted);
+                            // console.log("isFileCompleted " + isFileCompleted);
                         }
-                        else{
-                            console.log("chunk at "+(currentChunk+1)+" is null");
-                        }
+                        // else{
+                        //     console.log("chunk at "+(currentChunk+1)+" is null");
+                        // }
                         //drawImageOnCanvas(fileMatrix[0].toURL(),0,0);
                     }
-                    else{
-                        console.log("onwriteend called but file is null");
-                    }
+                    // else{
+                    //     console.log("onwriteend called but file is null");
+                    // }
                 };
                 if(seq == 0){
                     filewriter.write(responseBlob);
@@ -839,7 +839,6 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
         isPaired = true;
         isFileCompleted = true;
         isFileSent = false;
-        console.log('1111111111111111111111111');
         showMessage("Succeeded on making pair with [user:] " + data.partnerID);
     });
 
@@ -886,9 +885,6 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
             var fileName = data.fileName;
             initFileMatrix(maxseq);
 
-            console.log(fileName);
-            console.log(seq + "-" + maxseq);
-
             var url = data.fileURL;
             url = url.replace(/download/,"file");
 
@@ -916,6 +912,11 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     socket.on('imageCoords', function(data) {
         drawImageOnCanvas(fileMatrix[0].toURL(),data.X,data.Y);
     });
+
+    socket.on('downloadLink', function(data) {
+        downloadLink.href = data;
+        console.log(downloadLink);
+    })
     
     /**
      * Try to get geolocation on initialization

@@ -453,37 +453,26 @@ exports.upload = function(req, res) {
     var fileName = req.body.fileName;
     con.setMat(maxseq);
     con.setArrive(seq,f.path);
+
     var url = '/download?path=' + encodeURIComponent(f.path) +
               '&name=' + encodeURIComponent(fileName);
-    con.getTheOther(senderID).socket.emit('uploadSuccess', {
+
+    var theOther = con.getTheOther(senderID);
+    theOther.socket.emit('uploadSuccess', {
             'fileURL': url,
             'seq': seq,
             'maxseq': maxseq,
             'fileName': fileName
     });
-    // if(senderID === con.receiver.id){
-    //     con.sender.socket.emit('uploadSuccess', {
-    //         'fileURL': url,
-    //         'seq': seq,
-    //         'maxseq': maxseq,
-    //         'fileName': con.sender.fileName
-    //     });
-    // }
-    // else{
-    //     con.receiver.socket.emit('uploadSuccess', {
-    //         'fileURL': url,
-    //         'seq': seq,
-    //         'maxseq': maxseq,
-    //         'fileName': con.sender.fileName
-    //     });
-    // }
-    // if(con.isFinished()){
-    //     setTimeout(function(){
-    //         paired.clear(conID);
-    //     },1000);
-    // }
-    
+
     res.send(200);
+
+    if(con.isFinished()){
+        var downloadURL = con.regroup(senderID);
+        downloadURL = '/download?path=' + encodeURIComponent(downloadURL) +
+                        '&name=' + encodeURIComponent(fileName);
+        theOther.socket.emit('downloadLink', downloadURL);
+    }
 };
 
 
@@ -508,7 +497,6 @@ exports.download = function(req, res) {
 exports.staticfile = function(req, res) {
     var pathname = req.query.path;
     var realPath = pathname;
-    console.log(realPath);
     
     var ext = path.extname(realPath);
     ext = ext ? ext.slice(1) : 'unknown';
