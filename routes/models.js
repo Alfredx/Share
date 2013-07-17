@@ -224,8 +224,10 @@ var FileRegrouper = function(id1, id2) {
         if(!length)
             return null;
         this.path = senderID + "_" +this.ids[0]+"_"+this.ids[1];
-        this.path = pathArray[0].replace(/\\/,"\\"+this.path);
-        this.path = pathArray[0].replace(/\//,"\/"+this.path);
+        if(pathArray[0].indexOf("\\") != -1)
+            this.path = pathArray[0].replace(/\\/,"\\"+this.path);
+        else
+            this.path = pathArray[0].replace(/\//,"\/"+this.path);
 
 
         for (var i = 0; i < length; i++) {
