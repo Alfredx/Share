@@ -103,7 +103,7 @@ var context = canvas.getContext('2d');
 
 var SLICE = true;
 
-var BYTES_PER_CHUNK = 1024*50;
+var BYTES_PER_CHUNK = 1024*100;
 
  /**
   * Show if all chunks are received
@@ -695,22 +695,24 @@ var writeNextChunk = function(filewriter,maxseq) {
     filewriter.seek(filewriter.length);
     filewriter.write(fileMatrix[currentChunk+1]);
     currentChunk++;
-    if(currentChunk == maxseq){
-        isFileCompleted = true;
-        showMessage("all part received");
-        //selectedFile = fileMatrix[0];
-    }
 }
 
 var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     window.requestFileSystem(TEMPORARY, 5*1024*1024, function(fs){
         fs.root.getFile(fileName, {create:true},function(fileEntry){
-            entry = fileEntry;
             fileEntry.createWriter(function(writer){
                 writer.onwriteend = function(){
                     if(fileMatrix[0]){
+                        if(currentChunk == maxseq){
+                            isFileCompleted = true;
+                            showMessage("all part received");
+                            socket.emit('allReceived',{
+                                'conID':gConID,
+                                'senderID':gPartnerID
+                            });
+                            return;
+                        }
                         if(fileMatrix[currentChunk+1]){
-
                             if(writer.readyState == 1){
                                 setTimeout(function(){
                                     if(writer.readyState == 1){
@@ -889,13 +891,12 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
             initFileMatrix(maxseq);
 
             var url = data.fileURL;
-            url = url.replace(/download/,"file");
 
             var xhr = new XMLHttpRequest();
             xhr.open('GET',url, true);
             xhr.responseType = 'blob';
             xhr.onload = function(){
-                regroupSlicedFile(xhr.response,seq,maxseq, fileName);
+                regroupSlicedFile(xhr.response,seq,maxseq, fileName,socket);
             }
             xhr.send();
   

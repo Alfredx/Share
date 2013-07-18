@@ -233,6 +233,7 @@ var FileRegrouper = function(id1, id2) {
         for (var i = 0; i < length; i++) {
             var data = fs.readFileSync(pathArray[i]);
             fs.appendFileSync(this.path,data);
+            console.log("part "+i+" appended");
         };
 
         return this.path;
@@ -303,6 +304,7 @@ var Connection = function() {
     this.pathArray = null;
 
     this.regrouper = null;
+    this.fileName = null;
 
     /**
      *  To set one sequence number as true, means this chunk is sent
