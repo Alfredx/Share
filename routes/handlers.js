@@ -434,7 +434,7 @@ exports.index = function(req, res){
     }
 
     var ctx = {
-        title: 'Send or Receive '
+        title: ''
     };
     res.render('all', ctx);
 };
