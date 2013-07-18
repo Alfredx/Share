@@ -4,39 +4,58 @@
     <title>Share - <%= title %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="css/general.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/buttons.css">
 </head>
 <body>
-    <div class"hero-unit">
-        <h1>Share - <%= title %></h1>
-        <form class="form-horizontal" action="/upload" enctype="multipart/form-data" method="post">
-            <!-- uncomment the "Multiple files" verison
-            <input type="file" name="upload" id="sendFile" multiple/>
-            -->
-            <input class="input-large" type="file" name="upload" id="sendFile"/>
-            <output id="selectedList">
-                <ul></ul>
-            </output>
-            <div class="btn-group">
-                <button class="btn-large" type="button" id="sendButton" disabled hidden>Send</button>
-                <button class="btn-large" type="button" id="receiveButton" hidden>Receive</button>
-                <button class="btn-large" type="button" id="pairButton">Pair</button>
-                <button class="btn-large" type="button" id="pairSendButton">PSend</button>
-                <button class="btn-large" type="button" id="downloadButton">Download</button>
-            </div>
-        </form>
-        <progress value="1" max="100" hidden id="uploadProgress"></progress>
-        <p id="status">
-        </p>
+    <div>
+        <div class="hero-unit">
+            <h1>Share - <%= title %></h1>
+            <p>Just Find someone nearby, select your file and drag it to the right!</p>
+            <p>
+                <a class="btn btn-primary btn-large" href="javascript:pairButton.click();">Find someone nearby!</a>
+                <a class="btn btn-primary btn-large" href="javascript:sendFile.click();">Select file</a>
+            </p>
+            <canvas id="canvas" class="media" width="0" height="0"/>
+        </div>
+        
+        <div class="middiv">
+            <form  action="/upload" enctype="multipart/form-data" method="post">
+                <!-- uncomment the "Multiple files" verison
+                <input type="file" name="upload" id="sendFile" multiple/>
+                -->
+                <div>
+                    <button class="btn-large" type="button" id="sendButton" disabled hidden>Send</button>
+                    <button class="btn-large" type="button" id="receiveButton" hidden>Receive</button>
+                    <button class="btn-large" type="button" id="pairButton" hidden>Pair</button>
+                    <button class="btn-large" type="button" id="pairSendButton" hidden>PSend</button>
+                    <button class="btn-large" type="button" id="downloadButton" hidden>Download</button>
+                    
+                    <a class="" href="javascript:sendFile.click();" hidden>
+                        <span><em>+</em>选择图片
+                        <input class="input-large" type="file" name="upload" id="sendFile"/>
+                        </span>
+                    </a>
+                </div>
+                <output class="status" id="selectedList">
+                    <ul></ul>
+                </output>
+                
+            </form>
+            <progress value="1" max="100" hidden id="uploadProgress"></progress>
+            <p class="status" id="status"></p>
+        </div>
     </div>
     <a href="" id="downloadLink" hidden>Download</a>
 
-    <canvas id="canvas" class="media" width="600" height="400"/>
+    
     <!-- for socket.io -->
     <script type="text/javascript" src="/javascripts/socket.io.min.js"></script>
     <!-- for Share -->
     <script type="text/javascript" src="/javascripts/utils.js"></script>
     <script type="text/javascript" src="/javascripts/all.js"></script>
-    <script src="http://code.jquery.com/jquery.js"></script>
-    <script src="js/bootstrap.min.js"></script>
+<!--      <script src="http://code.jquery.com/jquery.js"></script>
+     <script src="js/bootstrap.min.js"></script> -->
 </body>
 </html> ,k 

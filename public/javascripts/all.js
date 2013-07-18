@@ -174,6 +174,7 @@ fileField.addEventListener('change', function(evt) {
     isFileCompleted = true;
     isFileSent = false;
     isFileDownloading = false;
+
 }, false);
 
 /**
@@ -191,7 +192,8 @@ var drawImageOnCanvas = function(src,x,y){
         imgWidth = 400;
         imgHeight = img.height*(imgWidth/img.width);
         // context.clearRect(0,0,canvas.width,canvas.height);
-        canvas.height = img.height;
+        canvas.height = imgHeight;
+        canvas.width = imgWidth*1.2
         if(x+imgWidth > 0){
             context.drawImage(img,x,y,imgWidth,imgHeight);
         }
@@ -882,6 +884,8 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
      * The sender has finished uploading.
      */
     socket.on('uploadSuccess', function(data) {
+        downloadButton.hidden = true;
+        downloadLink.href = "";
         showMessage("Ready to receive!");
 
         if(SLICE){
@@ -919,6 +923,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
 
     socket.on('downloadLink', function(data) {
         downloadLink.href = data;
+        downloadButton.hidden = false;
     })
     
     /**
