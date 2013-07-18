@@ -120,7 +120,7 @@ var Users = function() {
      *  The largest legal geo distance(Meter) of two users
      *  @type {Number}
      */
-    var MAXDISTANCE = 50.0;
+    var MAXDISTANCE = 500000000.0;
     /**
      * Given a baseUser, find the nearest user.
      * @param  {Object} baseUser The user to be compared.
@@ -233,7 +233,6 @@ var FileRegrouper = function(id1, id2) {
         for (var i = 0; i < length; i++) {
             var data = fs.readFileSync(pathArray[i]);
             fs.appendFileSync(this.path,data);
-            console.log("part "+i+" appended");
         };
 
         return this.path;
