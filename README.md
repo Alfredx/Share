@@ -2,6 +2,7 @@ Share
 ======
 
 Authors: Andriy
+         Alfred
 
 
 ## Intro
@@ -56,7 +57,3 @@ The following HTML(5) features might be employed: (*TODOs*)
 4. "node app.js" to start server.
 5. In browser, access 192.168.1.xxx:port to use. (port is hardcoded to 3000 for development)
 
-
-## Flows
-
-![](flows.jpg)
