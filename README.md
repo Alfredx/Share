@@ -1,8 +1,7 @@
 Share
 ======
 
-Authors: Andriy
-         Alfred
+Authors: Andriy & Alfred
 
 
 ## Intro
