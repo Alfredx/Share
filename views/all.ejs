@@ -5,32 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
     <link href="css/general.css" rel="stylesheet" media="screen">
+    <link href="css/messenger.css" rel="stylesheet" media="screen">
+    <link href="css/messenger-theme-future.css" rel="stylesheet" media="screen">
 <!--     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/buttons.css"> -->
 </head>
 <body>
     <div>
-        <div class="hero-unit">
+        <div class="hero-unit bb">
             <h1>Share your screen<%= title %></h1>
             <p>Just Find someone nearby, select your file and drag it to the right!</p>
-            <p>
-                <a class="btn btn-primary btn-large" href="javascript:pairButton.click();">Find someone nearby!</a>
-                <a class="btn btn-primary btn-large" href="javascript:sendFile.click();">Select file</a>
+            <p class="row">
+                <a class="btn btn-primary btn-large span3" href="javascript:pairButton.click();">Find someone nearby!</a>
+                <a class="btn btn-primary btn-large span3" href="javascript:sendFile.click();">Select file</a>
+                
             </p>
             <canvas id="canvas" class="media" width="0" height="0"/>
+            
         </div>
         
         <div class="middiv">
+            <button class="btn-primary btn-large span4" type="button" id="downloadButton" hidden>Download</button>
+            <output class="whitefont" id="selectedList">
+                <ul></ul>
+            </output>
+            <p class="whitefont" id="status"></p>
             <form  action="/upload" enctype="multipart/form-data" method="post">
                 <!-- uncomment the "Multiple files" verison
                 <input type="file" name="upload" id="sendFile" multiple/>
                 -->
-                <div>
+                <div class="row">
                     <button type="button" id="sendButton" disabled hidden>Send</button>
                     <button type="button" id="receiveButton" hidden>Receive</button>
                     <button type="button" id="pairButton" hidden>Pair</button>
                     <button type="button" id="pairSendButton" hidden>PSend</button>
-                    <button type="button" id="downloadButton" hidden>Download</button>
                     
                     <a class="" href="javascript:sendFile.click();" hidden>
                         <span><em>+</em>选择图片
@@ -38,13 +46,11 @@
                         </span>
                     </a>
                 </div>
-                <output class="status" id="selectedList">
-                    <ul></ul>
-                </output>
+                
                 
             </form>
             <progress value="1" max="100" hidden id="uploadProgress"></progress>
-            <p class="status" id="status"></p>
+            
         </div>
     </div>
     <a href="" id="downloadLink" hidden>Download</a>
@@ -54,7 +60,9 @@
     <!-- for Share -->
     <script type="text/javascript" src="/javascripts/utils.js"></script>
     <script type="text/javascript" src="/javascripts/all.js"></script>
-     <!--  <script src="http://code.jquery.com/jquery.js"></script> -->
+    <script type="text/javascript" src="/js/jquery-min.js"></script>
+    <script type="text/javascript" src="/js/messenger.min.js"></script>
+    <
      <!--  <script src="js/bootstrap.min.js"></script> -->
 </body>
 </html>

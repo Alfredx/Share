@@ -36,24 +36,39 @@ opacity: 0; /* 实现的关键点 */
 filter:alpha(opacity=0);/* 兼容IE */  
 }  
 
-body{
+.bb{
 background: #3C3C3C;	
 background-image: url(../img/texture.png);
 font-family: 'Poiret One', cursive;
 -webkit-user-select: none;
+margin-left: -45px;
+}
+.bb h1{
+	color: white;
+	font-size: 50px;
+}
+.bb p{
+	color:white;
 }
 
-h1{
+.whitefont-large{
 color: white;
 font-size: 40px;
 font-weight: 400;
 font-family: 'Quicksand', sans-serif;
 }
 
-.status{
+.whitefont{
 	color: white;
 }
 
 .middiv{
 	left: 100px;
+}
+
+body{
+background: #3C3C3C;	
+background-image: url(../img/texture.png);
+font-family: 'Poiret One', cursive;
+-webkit-user-select: none;
 }

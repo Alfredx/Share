@@ -13,10 +13,22 @@ var assert = sh.assert;
  * Display the message to the page.
  * @param  {String} msg The message to present.
  */
-var showMessage = function(msg) {
-    var field = document.getElementById('status');
-    field.innerHTML = msg;
-};
+var setMessageDefaults = function(){
+    $._messengerDefaults = {
+        extraClasses: 'messenger-fixed messenger-theme-future messenger-on-bottom'
+    }
+}
+
+var showMessage = function(msg,id){
+    if(!id)
+        id = 'only-one-message';
+    setMessageDefaults();
+    $.globalMessenger().post({
+        message:msg,
+        hideAfter:3,
+        id:id
+    });
+}
 
 
 // file selector
@@ -90,6 +102,9 @@ var context = canvas.getContext('2d');
  var imgWidth = 0;
  var imgHeight = 0;
 
+ var windowWidth = 400;
+ var windowHeight = 400;
+
 /**
  *  Socket for connection
  *  @type {Object}
@@ -152,22 +167,23 @@ fileField.addEventListener('change', function(evt) {
 
         selectedFile = {};
         // only the following properties are common
-        properties = ['name', 'type', 'size', 'lastModifiedDate'];
+        properties = ['name', 'type', 'size'];
         for (var i = 0, s = properties.length; i < s; i++) {
             var prop = properties[i];
             selectedFile[prop] = f[prop];
         }
-
-        // save the File instance, it will be used later in XHR2
-        selectedFile['handle'] = f;
+        selectedFile['size'] = sh.sizeToString(selectedFile['size']);
 
         results = "";
         // for (var k in f) {
         for (var k in selectedFile) {
-            results += (k + " : " + f[k]);
+            results += (k + " : " + selectedFile[k]);
             results += "<br/>";
         }
         output.push('<li>' + results + '</li>');
+
+        // save the File instance, it will be used later in XHR2
+        selectedFile['handle'] = f;
     }
     outputField.innerHTML = '<ul>' + output.join('') + "</ul>";
     sendButton.disabled = false;
@@ -189,11 +205,18 @@ var drawImageOnCanvas = function(src,x,y){
     img.src = src;
 
     img.onload = function(){
-        imgWidth = 400;
+        imgWidth = windowWidth/1.2;
+        if(imgWidth > 400)
+            imgWidth = 400;
         imgHeight = img.height*(imgWidth/img.width);
         // context.clearRect(0,0,canvas.width,canvas.height);
-        canvas.height = imgHeight;
-        canvas.width = imgWidth*1.2
+        if(canvas.height != imgHeight || canvas.width != imgWidth){
+            canvas.height = imgHeight;
+            canvas.width = imgWidth*1.2;
+        }
+        else{
+            canvas.width = canvas.width;
+        }
         if(x+imgWidth > 0){
             context.drawImage(img,x,y,imgWidth,imgHeight);
         }
@@ -295,6 +318,7 @@ var setMouseEvent = function(){
         canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         if(!checkMouseInArea())
             return;
+        event.preventDefault();
         imgOffsetX = canMouseX - imgX;
         imgOffsetY = canMouseY - imgY;
         isDragging = true;
@@ -378,7 +402,7 @@ var sendImageCoords = function(socket,x,y) {
         getGeolocation();
     }
     else{
-       showMessage("Your browser does not support Geolocation");
+       showMessage("Your browser does not support Geolocation",'geo');
        return;
     }
     socket.emit('findPair',{
@@ -408,7 +432,7 @@ var pairToSend = function(socket) {
         getGeolocation();
     }
     else{
-	   showMessage("Your browser does not support Geolocation");
+	   showMessage("Your browser does not support Geolocation",'geo');
        return;
     }
 
@@ -553,10 +577,10 @@ var onStartSending = function(socket, conID, senderID, receiverID) {
             sendAsOneFile(socket, conID);
         }
         
-        showMessage("Confirmed, uploading now...");
+        showMessage("Uploading now...",'upload');
     } else if (id === receiverID) {
         // self is the receiver
-        showMessage("Confirmed, user " + senderID + " has started sending..");
+        showMessage("User " + senderID + " has started sending..",'upload');
     }
 };
 
@@ -568,9 +592,9 @@ var sendAsOneFile = function(socket, conID){
     xhr.onload = function(e) {
         progressBar.hidden = true;
         if (this.status === 200) {
-            showMessage("Uploading finished.");
+            showMessage("Uploading finished.",'upload');
         } else {
-            showMessage("Error uploading?!");
+            showMessage("Error uploading?!",'upload');
             console.log("ERROR uploading?");
         }
     };
@@ -647,9 +671,9 @@ var uploadAChunk = function(chunk, seq, conID) {
     xhr.onload = function(e) {
         progressBar.hidden = true;
         if (this.status === 200) {
-            showMessage("Uploading finished. seq:"+seq);
+            showMessage("Sending... "+seq,'upload');
         } else {
-            showMessage("Error uploading?!");
+            showMessage("Error uploading?!",'upload');
             console.log("ERROR uploading?");
         }
     };
@@ -675,7 +699,7 @@ var getGeolocation = function() {
             2: "Can't detect your location",    // position unavailable
             3: "Connection timeout"             // timeout
         };
-        showMessage("Error retrieving GEO-LOCATION: " + errors[err.code]);
+        showMessage("Error retrieving GEO-LOCATION: " + errors[err.code],'geo');
     };
     navigator.geolocation.getCurrentPosition(onSuccess, onError, {
         enableHighAccuracy: true
@@ -707,7 +731,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
                     if(fileMatrix[0]){
                         if(currentChunk == maxseq){
                             isFileCompleted = true;
-                            showMessage("all part received");
+                            showMessage("File received",'upload');
                             socket.emit('allReceived',{
                                 'conID':gConID,
                                 'senderID':gPartnerID
@@ -767,6 +791,28 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     }
     // All APIs supported
 
+
+
+    
+    if (self.innerHeight) { // all except Explorer    
+        if (document.documentElement.clientWidth) {
+            windowWidth = document.documentElement.clientWidth;
+        } else {
+            windowWidth = self.innerWidth;
+        }
+        windowHeight = self.innerHeight;
+    } else {
+        if (document.documentElement && document.documentElement.clientHeight) { // Explorer 6 Strict Mode    
+            windowWidth = document.documentElement.clientWidth;
+            windowHeight = document.documentElement.clientHeight;
+        } else {
+            if (document.body) { // other Explorers    
+                windowWidth = document.body.clientWidth;
+                windowHeight = document.body.clientHeight;
+            }
+        }
+    } 
+
     socket = io.connect('/');
 
     socket.on('connecting', function() {
@@ -805,7 +851,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
         if (navigator.geolocation)
             getGeolocation();
         else
-           showMessage("Your browser does not support Geolocation");
+           showMessage("Your browser does not support Geolocation",'geo');
         socket.emit('iam', {
             'id' : id,
             'geo': geo
@@ -877,7 +923,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
      * The sender has updated its uploading progress.
      */
     socket.on('uploadProgress', function(data) {
-        showMessage("Uploading " + data.progress + "%");
+        showMessage("Uploading " + data.progress + "%",'upload');
     });
 
     /**
@@ -886,7 +932,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     socket.on('uploadSuccess', function(data) {
         downloadButton.hidden = true;
         downloadLink.href = "";
-        showMessage("Ready to receive!");
+        showMessage("Receiving file...",'upload');
 
         if(SLICE){
             var seq = data.seq;
@@ -914,7 +960,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
      * The uploading somehow failed..
      */
     socket.on('uploadFailed', function(data) {
-        showMessage("Uploading failed...");
+        showMessage("Uploading failed...",'upload');
     });
 
     socket.on('imageCoords', function(data) {
@@ -953,5 +999,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
             return;
         downloadLink.click();
     }
+
+
 
 })();

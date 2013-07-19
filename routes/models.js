@@ -340,7 +340,7 @@ var Connection = function() {
             if(!this.seqArray[i])
                 return false;
         }
-        this.maxseq = null;
+        // this.maxseq = 0;
         return true;
     }
 
