@@ -3,6 +3,7 @@
  */
 
 var models = require('./models');
+var depreciateHandlers = require('./depreciate_handlers');
 var path = require("path");
 var fs = require("fs");
 var url = require("url");
@@ -13,6 +14,18 @@ var Users = models.Users;
 var Connection = models.Connection;
 var Pairs = models.Pairs;
 
+/**
+ *  depreciated variables and handlers
+    just undefined here dont know why
+ */
+var toSend = depreciateHandlers.toSend;
+var toReceive = depreciateHandlers.toReceive;
+var onPairToReceive = depreciateHandlers.onPairToReceive;
+var onPairToSend = depreciateHandlers.onPairToSend;
+var onConfirmed = depreciateHandlers.onConfirmed;
+var onConfirmFailed = depreciateHandlers.onConfirmFailed;
+
+
 
 /**
  * The number used as a socket's id.
@@ -21,16 +34,6 @@ var Pairs = models.Pairs;
  * @type {Number}
  */
 var socketID = 0;
-
-
-/*
- * All users that are trying to send files.
- */
-var toSend = new Users();
-/*
- * All users that are trying to receive files.
- */
-var toReceive = new Users();
 
 var toPair = new Users();
 
@@ -64,107 +67,7 @@ var parsePort = function(socket) {
 };
 
 
-/**
- * Called when a user tries to receive files.
- * @param  {Object} socket The  object used in socket.io.
- * @param  {String} receiveID   The id for the user to receive.
- * @param  {Object} geo         Null or A JSON object that contains latitude, longitude and accuracy.
- */
-var onPairToReceive = function(socket, receiveID, geo) {
-    toSend.clear(receiveID);
-    toReceive.clear(receiveID);
 
-    // TODO: what if the user has connected and waited for sharing's completion.
-
-    var user = new UserData();
-    user.id = receiveID;
-    user.socket = socket;
-    user.ip = parseAddress(socket);
-    user.port = parsePort(socket);
-    if(geo){
-        user.geoLatitude = geo.latitude;
-        user.geoLongitude = geo.longitude;
-        user.geoAccuracy = geo.accuracy;
-    }
-
-    var partner = toSend.pickUpon(user);
-    if (partner) {
-        // successfully finds someone to pair, add into connection dict
-        var conID = paired.add(partner, user);
-
-        partner.socket.emit('confirmSend', {
-            'connectionID': conID,
-            'partnerID': user.id,
-            'fileName': partner.fileName,
-            'fileSize': partner.fileSize
-        });
-        socket.emit('confirmReceive', {
-            'connectionID': conID,
-            'partnerID': partner.id,
-            'fileName': partner.fileName,
-            'fileSize': partner.fileSize
-        });
-
-        toSend.clear(partner.id);
-    } else {
-        // fails to pair
-        toReceive.addTillExpire(user, function(u) {
-            u.socket.emit('pairFailed');
-        });
-    }
-};
-
-
-/**
- * Called when a user tries to send files.
- * @param  {Object} socket   The object used in socket.io.
- * @param  {String} sendID   The id for the user to send.
- * @param  {Object} geo      Null or A JSON object that contains latitude, longitude and accuracy.
- * @param  {Object} fileInfo A JSON object that contains name, type, size, lastModifiedDate.
- */
-var onPairToSend = function(socket, sendID, geo, fileInfo) {
-    toSend.clear(sendID);
-    toReceive.clear(sendID);
-
-    var user = new UserData();
-    user.id = sendID;
-    user.socket = socket;
-    user.ip = parseAddress(socket);
-    user.port = parsePort(socket);
-    user.fileName = fileInfo.name;
-    user.fileSize = fileInfo.size;
-    if(geo){
-        user.geoLongitude = geo.longitude;
-        user.geoLatitude = geo.latitude;
-        user.geoAccuracy = geo.accuracy;
-    }
-
-    var partner = toReceive.pickUpon(user);
-    if (partner) {
-        // successfully finds someone to pair, add into connection dict
-        var conID = paired.add(user, partner);
-
-        partner.socket.emit('confirmReceive', {
-            'connectionID': conID,
-            'partnerID': user.id,
-            'fileName': user.fileName,
-            'fileSize': user.fileSize
-        });
-        socket.emit('confirmSend', {
-            'connectionID': conID,
-            'partnerID': partner.id,
-            'fileName': user.fileName,
-            'fileSize': user.fileSize
-        });
-
-        toReceive.clear(partner.id);
-    } else {
-        // fails to pair
-        toSend.addTillExpire(user, function(u) {
-            u.socket.emit('pairFailed');
-        });
-    }
-};
 
 /**
  *  Called when a user wants to find a pair but not to send file
@@ -173,7 +76,7 @@ var onPairToSend = function(socket, sendID, geo, fileInfo) {
  * @param  {Object} geo         Null or A JSON object that contains latitude, longitude and accuracy.
  */
 var onFindPair = function(socket, userID, geo) {
-    toPair.clear(userID);
+    toPair.remove(userID);
 
     var user = new UserData();
     user.id = userID;
@@ -186,7 +89,7 @@ var onFindPair = function(socket, userID, geo) {
         user.geoAccuracy = geo.accuracy;
     }
 
-    var partner = toPair.pickUpon(user);
+    var partner = toPair.findNearestUser(user);
     if (partner) {
         // successfully finds someone to pair, add into connection dict
         var conID = paired.add(user, partner);
@@ -199,7 +102,7 @@ var onFindPair = function(socket, userID, geo) {
             'partnerID': user.id
         });
 
-        toPair.clear(partner.id);
+        toPair.remove(partner.id);
     } else {
         // fails to pair
         toPair.addTillExpire(user, function(u) {
@@ -209,46 +112,6 @@ var onFindPair = function(socket, userID, geo) {
 
 };
 
-/**
- * Pair has been made, but one user disagrees to share file with the other.
- * @param  {Number} conID      The ID of the connection.
- * @param  {Number} fromUserID The ID of the user that disagrees.
- */
-var onConfirmFailed = function(conID, fromUserID) {
-    paired.clear(conID, fromUserID, function(u) {
-        // u is the partner
-        u.socket.emit('betrayed', {
-            'partnerID': fromUserID
-        });
-    });
-};
-
-
-/**
- * One use confirmed the connection after the pair being made.
- */
-var onConfirmed = function(conID, userID) {
-    if (!paired.confirm(conID, userID)) {
-        return;
-    }
-
-    // both confirmed
-    var con = paired.get(conID);
-    var sender = con.sender;
-    var receiver = con.receiver;
-
-    sender.socket.emit('startSending', {
-        'connectionID': conID,
-        'senderID': sender.id,
-        'receiverID': receiver.id
-    });
-    receiver.socket.emit('startSending', {
-        'connectionID': conID,
-        'senderID': sender.id,
-        'receiverID': receiver.id
-    });
-    con.status = "SENDING";
-};
 
 var onNewConnection = function(socket, id, geo){
     var user = new UserData();
@@ -266,9 +129,10 @@ var onNewConnection = function(socket, id, geo){
 }
 
 var disconnectCallback = function(user){
-    toSend.clear(user.id);
-    toReceive.clear(user.id);
-    toPair.clear(user.id);
+    // toSend.remove(user.id);
+    // toReceive.remove(user.id);
+    toPair.remove(user.id);
+    allUsers.remove(user.id);
     disconnectTimers[user.id] = null;
     //TODO!! tell others this user has disconnected
 }
@@ -305,12 +169,53 @@ var initSocket = function(socket) {
      * Remove relative data in toSend and toReceive dictionary when disconnected.
      */
     socket.on('disconnect', function() {
-        toSend.clear(assignedID);
-        toReceive.clear(assignedID);
+        // toSend.remove(assignedID);
+        // toReceive.remove(assignedID);
         console.log('User disconnected.. [ID] ' + assignedID);
         disconnectTimers[assignedID] = allUsers.disconnectTimer(assignedID,disconnectCallback);
     });
 
+    /**
+     * Uploading failed, clear this connection.
+     */
+    socket.on('uploadFailed', function(data) {
+        var con = paired.get(data.connectionID);
+        con.receiver.socket.emit('uploadFailed', {
+        });
+        //paired.remove(con.id);
+    });
+
+    /**
+     *  User tries to find pair
+     */
+    socket.on('findPair', function(data) {
+        onFindPair(socket, data.id, data.geo);
+    });
+
+    socket.on('imageCoords', function(data) {
+        var senderID = data.sender;
+        var conID = data.conID;
+        var con = paired.get(conID);
+        con.getTheOther(senderID).socket.emit('imageCoords', {
+                'X':data.X,
+                'Y':data.Y
+            });
+    });
+
+    socket.on('allReceived', function(data) {
+        var conID = data.conID;
+        var senderID = data.senderID;
+        var con = paired.get(conID);
+        var downloadURL = con.regroup(senderID);
+        downloadURL = '/download?path=' + encodeURIComponent(downloadURL) +
+                        '&name=' + encodeURIComponent(con.fileName);
+        con.getTheOther(senderID).socket.emit('downloadLink', downloadURL);
+    });
+
+
+    /*********************************************************
+     *  depreciated socket message
+     */
     /**
      * User tries to pair to receive files.
      */
@@ -350,56 +255,12 @@ var initSocket = function(socket) {
         });
     });
 
-    /**
-     * Uploading failed, clear this connection.
-     */
-    socket.on('uploadFailed', function(data) {
-        var con = paired.get(data.connectionID);
-        con.receiver.socket.emit('uploadFailed', {
-        });
-        paired.clear(con.id);
-    });
-
-    /**
-     *  User tries to find pair
-     */
-    socket.on('findPair', function(data) {
-        onFindPair(socket, data.id, data.geo);
-    });
-
     socket.on('partnerEcho', function(data){
         var senderID = data.id;
         var conID = data.conID;
         var partnerID = data.partnerID;
     });
-
-    socket.on('imageCoords', function(data) {
-        var senderID = data.sender;
-        var conID = data.conID;
-        var con = paired.get(conID);
-        if(senderID === con.sender.id){
-            con.receiver.socket.emit('imageCoords', {
-                'X':data.X,
-                'Y':data.Y
-            })
-        }
-        else{
-            con.sender.socket.emit('imageCoords', {
-                'X':data.X,
-                'Y':data.Y
-            })
-        }
-    });
-
-    socket.on('allReceived', function(data) {
-        var conID = data.conID;
-        var senderID = data.senderID;
-        var con = paired.get(conID);
-        var downloadURL = con.regroup(senderID);
-        downloadURL = '/download?path=' + encodeURIComponent(downloadURL) +
-                        '&name=' + encodeURIComponent(con.fileName);
-        con.getTheOther(senderID).socket.emit('downloadLink', downloadURL);
-    });
+    /**********************************************************/
 };
 
 /**
@@ -436,7 +297,7 @@ exports.index = function(req, res){
     var ctx = {
         title: ''
     };
-    res.render('all', ctx);
+    res.render('main', ctx);
 };
 
 
@@ -461,7 +322,7 @@ exports.upload = function(req, res) {
     var senderID = req.body.sender;
     var fileName = req.body.fileName;
     con.fileName = fileName;
-    con.setMat(maxseq);
+    con.newFileUpload(maxseq);
     con.setArrive(seq,f.path);
     var theOther = con.getTheOther(senderID);
 
@@ -535,29 +396,29 @@ exports.staticfile = function(req, res) {
 /**
  * The test page displays data in toSend, toReceive and paired.
  */
-exports.test = function(req, res) {
-    var newline = '<br/>';
+// exports.test = function(req, res) {
+//     var newline = '<br/>';
 
-    var results = "To Send: ";
-    results += newline;
-    var sends = toSend.userIDs();
-    results += sends.join(', ');
-    results += newline;
+//     var results = "To Send: ";
+//     results += newline;
+//     var sends = toSend.userIDs();
+//     results += sends.join(', ');
+//     results += newline;
 
-    results += "To Receive: ";
-    results += newline;
-    var receives = toReceive.userIDs();
-    results += receives.join(', ');
-    results += newline;
+//     results += "To Receive: ";
+//     results += newline;
+//     var receives = toReceive.userIDs();
+//     results += receives.join(', ');
+//     results += newline;
 
-    results += "Connections: ";
-    results += newline;
-    var cons = paired.ids();
-    for (var idx in cons) {
-        var c = cons[idx];
-        results += "Connection " + c.connectionID + ": " + c.senderID + " => " + c.receiverID;
-        results += newline;
-    }
+//     results += "Connections: ";
+//     results += newline;
+//     var cons = paired.ids();
+//     for (var idx in cons) {
+//         var c = cons[idx];
+//         results += "Connection " + c.connectionID + ": " + c.senderID + " => " + c.receiverID;
+//         results += newline;
+//     }
 
-    res.send(200, results);
-};
+//     res.send(200, results);
+// };

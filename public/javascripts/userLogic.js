@@ -33,6 +33,7 @@ var showMessage = function(msg,id){
 
 // file selector
 var fileField = document.getElementById('sendFile');
+var fileDelegate = document.getElementById('fileDelegate');
 // output 
 var outputField = document.getElementById('selectedList');
 // buttons
@@ -136,7 +137,7 @@ var fileMatrix = null;
 
 var currentChunk = 0;
 
-var TESTSWITCH = true;
+
 
 
 window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;
@@ -303,7 +304,8 @@ var setMouseEvent = function(){
             return;
         if(isDragging){
             canvas.width = canvas.width;
-            context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
+            // context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
+            context.drawImage(img,canMouseX-imgOffsetX,0,imgWidth,imgHeight);
             var okToSend = isMouseInSendArea() && !isFileSent;
             if(okToSend){
                 pairedSend(socket);
@@ -348,6 +350,7 @@ var setMouseEvent = function(){
         if(isDragging){
             canvas.width = canvas.width;
             context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
+            context.drawImage(img,canMouseX-imgOffsetX,0,imgWidth,imgHeight);
             var okToSend = isMouseInSendArea() && !isFileSent;
             if(okToSend){
                 pairedSend(socket);
@@ -412,62 +415,7 @@ var sendImageCoords = function(socket,x,y) {
     showMessage("Finding the nearest user for you.. [me]" + id);
  };
 
-
-/**
- * Try to pair another user to share files. (send)
- * @param  {Object} socket The socket used in socket.io.
- */
-var pairToSend = function(socket) {
-    if (!isConnected) {
-        alert("Not connected to server => unable to share!");
-        return;
-    }
-
-    assert (selectedFile !== null);
-
-    /*
-     * Retrieve geo-location every time when you are about to send a file.
-     */
-    if (navigator.geolocation) {
-        getGeolocation();
-    }
-    else{
-	   showMessage("Your browser does not support Geolocation",'geo');
-       return;
-    }
-
-    socket.emit('pairToSend', {
-        'id': id,
-        'geo': geo,
-        'fileInfo': selectedFile
-    });
-    showMessage("Finding someone to receive files.. [me]" + id);
-};
-
-
-/**
- * Try to pair another user to share files. (receive)
- * @param  {Object} socket The socket used in socket.io.
- */
-var pairToReceive = function(socket) {
-    if (!isConnected) {
-        alert("Not connected to server => unable to share!");
-        return;
-    }
-
-    socket.emit('pairToReceive', {
-        'id': id,
-        'geo': geo
-    });
-    showMessage("Finding someone nearby to send files.. [me]" + id);
-};
-
 var pairedSend = function(socket){
-    // socket.emit('partnerEcho', {
-    //     'id':id,
-    //     'conID':gConID,
-    //     'partnerID':gPartnerID
-    // });
     if(isPaired){
         onStartSending(socket,gConID,id,gPartnerID);
     }
@@ -477,89 +425,8 @@ var pairedSend = function(socket){
 
 }
 
-
 /**
- * After pairing succeeded, confirm to send files.
- * @param  {Object} socket    The socket used in socket.io.
- * @param  {Number} partner   The ID of the partner of this sharing.
- * @param  {String} fileName  The name of the file to send.
- * @param  {Number} fileSize  The size of the file to send.
- * @param  {Number} conID     The ID of the connection.
- */
-var confirmToSend = function(socket, partnerID, fileName, fileSize, conID) {
-    if(TESTSWITCH){
-        socket.emit('confirmed', {
-            'connectionID': conID,
-            'myID': id,
-            'partnerID': partnerID
-        });
-        return;
-    }
-    var hint = "Confirm to send '" + fileName + "' " +
-               "(" + sh.sizeToString(fileSize) + ") " +
-               "to user " + partnerID;
-    if (confirm(hint)) {
-        // confirmed, ready for sending
-        socket.emit('confirmed', {
-            'connectionID': conID,
-            'myID': id,
-            'partnerID': partnerID
-        });
-        showMessage('Confirmed to send files to user ' + partnerID + ', waiting for his/her response..');
-    } else {
-        // not confirmed, tell the other user
-        socket.emit('confirmFailed', {
-            'connectionID': conID,
-            'myID': id,
-            'partnerID': partnerID
-        });
-        showMessage('You chose not to send files to user ' + partnerID);
-    }
-};
-
-
-/**
- * After pairing succeeded, confirm to receive files.
- * @param  {Object} socket    The socket used in socket.io.
- * @param  {Number} partner   The ID of the partner of this sharing.
- * @param  {String} fileName  The name of the file to send.
- * @param  {Number} fileSize  The size of the file to send.
- * @param  {Number} conID     The ID of the connection.
- */
-var confirmToReceive = function(socket, partnerID, fileName, fileSize, conID) {
-    if(TESTSWITCH){
-        socket.emit('confirmed', {
-            'connectionID': conID,
-            'myID': id,
-            'partnerID': partnerID
-        });
-        return;
-    }
-    var hint = "Confirm to receive '" + fileName + "' " +
-               "(" + sh.sizeToString(fileSize) + ") " +
-               "from user " + partnerID;
-    if (confirm(hint)) {
-        // confirmed, ready for receiving
-        socket.emit('confirmed', {
-            'connectionID': conID,
-            'myID': id,
-            'partnerID': partnerID
-        });
-        showMessage('Confirmed to receive files from user ' + partnerID + ', waiting for his/her response..');
-    } else {
-        // not confirmed, tell the other user
-        socket.emit('confirmFailed', {
-            'connectionID': conID,
-            'myID': id,
-            'partnerID': partnerID
-        });
-        showMessage('You chose not to receive files from user ' + partnerID);
-    }
-};
-
-
-/**
- * Both users have confirmed, it's time to start sending.
+ * start sending file
  * @param  {Object} socket     The socket used in socket.io.
  * @param  {Number} conID      The ID of the connection.
  * @param  {Number} senderID   The ID of the sender.
@@ -691,6 +558,7 @@ var getGeolocation = function() {
             'longitude': pos.coords.longitude,
             'accuracy': pos.coords.accuracy
         };
+        alert(geo.latitude +" " + geo.longitude + " "+ geo.accuracy);
 
     };
     var onError = function(err) {
@@ -705,6 +573,27 @@ var getGeolocation = function() {
         enableHighAccuracy: true
     });
 };
+
+var getWindowsWidthAndHeight = function(){
+    if (self.innerHeight) { // all except Explorer    
+        if (document.documentElement.clientWidth) {
+            windowWidth = document.documentElement.clientWidth;
+        } else {
+            windowWidth = self.innerWidth;
+        }
+        windowHeight = self.innerHeight;
+    } else {
+        if (document.documentElement && document.documentElement.clientHeight) { // Explorer 6 Strict Mode    
+            windowWidth = document.documentElement.clientWidth;
+            windowHeight = document.documentElement.clientHeight;
+        } else {
+            if (document.body) { // other Explorers    
+                windowWidth = document.body.clientWidth;
+                windowHeight = document.body.clientHeight;
+            }
+        }
+    }
+}
 
 var initFileMatrix = function(maxseq) {
     if(isFileCompleted){
@@ -731,6 +620,8 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
                     if(fileMatrix[0]){
                         if(currentChunk == maxseq){
                             isFileCompleted = true;
+                            isFileDownloading = false;
+                            fileDelegate.href = "javascript:sendFile.click();";
                             showMessage("File received",'upload');
                             socket.emit('allReceived',{
                                 'conID':gConID,
@@ -749,7 +640,6 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
                                     writeNextChunk(writer,maxseq);
                                 },500)
                             }
-
                             writeNextChunk(writer,maxseq);
                         }
                     }
@@ -773,7 +663,29 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     },function(err){
         console.log("error when requesting FS");
     });
+};
 
+var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
+    fileDelegate.href = "javascript:void(0)";
+    fileDelegate.class = "btn btn-inverse btn-large span3";
+    downloadButton.hidden = true;
+    downloadLink.href = "";
+    showMessage("Receiving file...",'upload');
+    //isFileDownloading = true;
+    if(SLICE){
+        initFileMatrix(maxseq);
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET',url, true);
+        xhr.responseType = 'blob';
+        xhr.onload = function(){
+            regroupSlicedFile(xhr.response,seq,maxseq, fileName,socket);
+        }
+        xhr.send();
+
+    }
+    else{
+        drawImageOnCanvas(data.fileURL,0,0);
+    }
 };
 
 /**
@@ -790,28 +702,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
         return;
     }
     // All APIs supported
-
-
-
-    
-    if (self.innerHeight) { // all except Explorer    
-        if (document.documentElement.clientWidth) {
-            windowWidth = document.documentElement.clientWidth;
-        } else {
-            windowWidth = self.innerWidth;
-        }
-        windowHeight = self.innerHeight;
-    } else {
-        if (document.documentElement && document.documentElement.clientHeight) { // Explorer 6 Strict Mode    
-            windowWidth = document.documentElement.clientWidth;
-            windowHeight = document.documentElement.clientHeight;
-        } else {
-            if (document.body) { // other Explorers    
-                windowWidth = document.body.clientWidth;
-                windowHeight = document.body.clientHeight;
-            }
-        }
-    } 
+    getWindowsWidthAndHeight();
 
     socket = io.connect('/');
 
@@ -852,6 +743,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
             getGeolocation();
         else
            showMessage("Your browser does not support Geolocation",'geo');
+        var name = prompt("To receive better experience\nPlease tell us your name:","(your name here)");
         socket.emit('iam', {
             'id' : id,
             'geo': geo
@@ -866,25 +758,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
             'geo':geo
         })
     })
-
-    /**
-     * Successfully making a pair, confirm sending files to it?
-     * @param  {Object} data A JSON object that contains multiple info.
-     */
-    socket.on('confirmSend', function(data) {
-        gConID = data.connectionID;
-        gPartnerID = data.partnerID;
-        confirmToSend(socket, data.partnerID, data.fileName, data.fileSize, data.connectionID);
-    });
-
-    /**
-     * Successfully making a pair, confirm receiving files from it?
-     * @param  {Object} data A JSON object that contains multiple info.
-     */
-    socket.on('confirmReceive', function(data) {
-        confirmToReceive(socket, data.partnerID, data.fileName, data.fileSize, data.connectionID);
-    });
-
+    
     /**
      *  Succeeded on making a pair
      */
@@ -905,13 +779,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
         showMessage("Failed making a pair. It seems nobody is nearby.");
     });
 
-    /**
-     * After successfully pairing, the partner chose not to share.
-     */
-    socket.on('betrayed', function(data) {
-        showMessage("Your partner (User " + data.partnerID + ") chose not to share files with you..");
-    });
-
+    
     /**
      * Both users confirmed, it's time to start sending.
      */
@@ -920,40 +788,10 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     });
 
     /**
-     * The sender has updated its uploading progress.
-     */
-    socket.on('uploadProgress', function(data) {
-        showMessage("Uploading " + data.progress + "%",'upload');
-    });
-
-    /**
      * The sender has finished uploading.
      */
     socket.on('uploadSuccess', function(data) {
-        downloadButton.hidden = true;
-        downloadLink.href = "";
-        showMessage("Receiving file...",'upload');
-
-        if(SLICE){
-            var seq = data.seq;
-            var maxseq = data.maxseq;
-            var fileName = data.fileName;
-            initFileMatrix(maxseq);
-
-            var url = data.fileURL;
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET',url, true);
-            xhr.responseType = 'blob';
-            xhr.onload = function(){
-                regroupSlicedFile(xhr.response,seq,maxseq, fileName,socket);
-            }
-            xhr.send();
-  
-        }
-        else{
-            drawImageOnCanvas(data.fileURL,0,0);
-        }
+        onUploadSuccess(socket,data.seq,data.maxseq,data.fileName,data.fileURL);
     });
 
     /**
@@ -964,7 +802,8 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     });
 
     socket.on('imageCoords', function(data) {
-        drawImageOnCanvas(fileMatrix[0].toURL(),data.X,data.Y);
+        // drawImageOnCanvas(fileMatrix[0].toURL(),data.X,data.Y);
+        drawImageOnCanvas(fileMatrix[0].toURL(),data.X,0);
     });
 
     socket.on('downloadLink', function(data) {
@@ -991,7 +830,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
     };
 
     pairSendButton.onclick = function() {
-        pairedSend();
+        pairedSend(socket);
     }
 
     downloadButton.onclick = function() {
@@ -1000,6 +839,40 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
         downloadLink.click();
     }
 
+    /*********************************************************************/
+    //depreciate socket message
+    /**
+     * Successfully making a pair, confirm sending files to it?
+     * @param  {Object} data A JSON object that contains multiple info.
+     */
+    socket.on('confirmSend', function(data) {
+        gConID = data.connectionID;
+        gPartnerID = data.partnerID;
+        confirmToSend(socket, data.partnerID, data.fileName, data.fileSize, data.connectionID);
+    });
+
+    /**
+     * Successfully making a pair, confirm receiving files from it?
+     * @param  {Object} data A JSON object that contains multiple info.
+     */
+    socket.on('confirmReceive', function(data) {
+        confirmToReceive(socket, data.partnerID, data.fileName, data.fileSize, data.connectionID);
+    });
+
+    /**
+     * After successfully pairing, the partner chose not to share.
+     */
+    socket.on('betrayed', function(data) {
+        showMessage("Your partner (User " + data.partnerID + ") chose not to share files with you..");
+    });
+
+    /**
+     * The sender has updated its uploading progress.
+     */
+    socket.on('uploadProgress', function(data) {
+        showMessage("Uploading " + data.progress + "%",'upload');
+    });
+    /************************************************************************/
 
 
 })();

@@ -101,3 +101,17 @@ sh.sizeToString = function(size) {
     size = Math.round(size * 100) / 100;
     return size + unit;
 };
+
+sh.continuousTimer = function(condition, callback, step){
+    if(!step)
+        step = 500;
+    setTimeout(function(){
+        if(condition){
+            setTimeout(function(){
+                callback();
+            },step);
+        }
+        callback();
+    },step);
+}
+

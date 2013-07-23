@@ -17,11 +17,21 @@
             <p>Just Find someone nearby, select your file and drag it to the right!</p>
             <p class="row">
                 <a class="btn btn-primary btn-large span3" href="javascript:pairButton.click();">Find someone nearby!</a>
-                <a class="btn btn-primary btn-large span3" href="javascript:sendFile.click();">Select file</a>
+                <a class="btn btn-primary btn-large span3" id="fileDelegate" href="javascript:sendFile.click();" >Select file</a>
                 
             </p>
-            <canvas id="canvas" class="media" width="0" height="0"/>
             
+            <table class="whitefont table" border="1" id="pairTable">
+            <tr>
+                <th>test1</th>
+                <th>test2</th>
+            </tr>
+            <tr>
+                <td>failed</td>
+                <td><button class="btn btn-small">testbutton</button></td>
+            </tr>
+            <canvas id="canvas" class="media" width="1" height="1"/>
+        </table>
         </div>
         
         <div class="middiv">
@@ -59,10 +69,10 @@
     <script type="text/javascript" src="/javascripts/socket.io.min.js"></script>
     <!-- for Share -->
     <script type="text/javascript" src="/javascripts/utils.js"></script>
-    <script type="text/javascript" src="/javascripts/all.js"></script>
+    <script type="text/javascript" src="/javascripts/userLogic.js"></script>
     <script type="text/javascript" src="/js/jquery-min.js"></script>
     <script type="text/javascript" src="/js/messenger.min.js"></script>
-    <
+    
      <!--  <script src="js/bootstrap.min.js"></script> -->
 </body>
 </html>

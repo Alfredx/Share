@@ -40,7 +40,7 @@ app.get('/download', handlers.download);
 app.get('/file',handlers.staticfile);
 
 // only for testing
-app.get('/test', handlers.test);
+// app.get('/test', handlers.test);
 
 var server = http.createServer(app);
 var io = sio.listen(server, {log: false});

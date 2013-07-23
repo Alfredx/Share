@@ -3,6 +3,37 @@
  */
 var fs = require('fs');
 
+/**
+ * Calculate the distance between two geo locations
+ * @param {Number} lat1 The latitude of location 1
+ * @param {Number} lng1 The longitude of location 1
+ * @param {Number} lat2 The latitude of location 2
+ * @param {Number} lng2 The longitude of location 2
+ * @return {Number}     The distance between two locations
+ */
+var geoDistance = function(lat1, lng1, lat2, lng2){
+    var getRad = function(d){
+        return d*Math.PI/180.0;
+    };
+    var f = getRad((lat1 + lat2)/2);
+    var g = getRad((lat1 - lat2)/2);
+    var l = getRad((lng1 - lng2)/2);       
+    var sg = Math.sin(g);
+    var sl = Math.sin(l);
+    var sf = Math.sin(f);        
+    var s,c,w,r,d,h1,h2;
+    var a = 6378137.0;  
+    var fl = 1/298.257;        
+    sg = sg*sg;        sl = sl*sl;        sf = sf*sf;        
+    s = sg*(1-sl) + (1-sf)*sl;
+    c = (1-sg)*(1-sl) + sf*sl;
+    w = Math.atan(Math.sqrt(s/c));
+    r = Math.sqrt(s*c)/w;
+    d = 2*w*a;
+    h1 = (3*r -1)/2/c;
+    h2 = (3*r +1)/2/s;        
+    return d*(1 + fl*(h1*sf*(1-sg) - h2*(1-sf)*sg));
+};
 
 /**
  * Containing all the information of a user.
@@ -13,6 +44,7 @@ var UserData = function() {
      * @type {String}
      */
     this.id = null;
+    this.name = null;
     /**
      * Socket object used in socket.io.
      * @type {Object}
@@ -77,7 +109,7 @@ var Users = function() {
      * Remove the user's data in store.
      * @param  {Number} userID The ID of the user to be removed.
      */
-    this.clear = function(userID) {
+    this.remove = function(userID) {
         delete this._store[userID];
 
     };
@@ -126,12 +158,12 @@ var Users = function() {
      * @param  {Object} baseUser The user to be compared.
      * @return {Object}          The nearest user.
      */
-    this.pickUpon = function(baseUser) {
+    this.findNearestUser = function(baseUser) {
 	   console.log("[_store:] "+Object.keys(this._store));
         var minDistance = 6378137.0;
         var targetUser = null;
         for(var uid in this._store){
-            var distance = this.geoDistance(this._store[uid].geoLatitude, this._store[uid].geoLongitude, baseUser.geoLatitude, baseUser.geoLongitude);
+            var distance = geoDistance(this._store[uid].geoLatitude, this._store[uid].geoLongitude, baseUser.geoLatitude, baseUser.geoLongitude);
             console.log("[distance User"+baseUser.id+" and "+uid+"] " + distance);
             if(distance < minDistance){
                 minDistance = distance;
@@ -143,43 +175,7 @@ var Users = function() {
         return targetUser;
 
     };
-    /**
-     * Get the radian of an angle
-     * @oaram {Number} d    The angle
-     * @return {Number}     The radian
-     */
-    this.getRad = function(d){
-        return d*Math.PI/180.0;
-    };
-
-    /**
-     * Calculate the distance between two geo locations
-     * @param {Number} lat1 The latitude of location 1
-     * @param {Number} lng1 The longitude of location 1
-     * @param {Number} lat2 The latitude of location 2
-     * @param {Number} lng2 The longitude of location 2
-     * @return {Number}     The distance between two locations
-     */
-    this.geoDistance = function(lat1, lng1, lat2, lng2){
-        var f = this.getRad((lat1 + lat2)/2);
-        var g = this.getRad((lat1 - lat2)/2);
-        var l = this.getRad((lng1 - lng2)/2);       
-        var sg = Math.sin(g);
-        var sl = Math.sin(l);
-        var sf = Math.sin(f);        
-        var s,c,w,r,d,h1,h2;
-        var a = 6378137.0;  
-        var fl = 1/298.257;        
-        sg = sg*sg;        sl = sl*sl;        sf = sf*sf;        
-        s = sg*(1-sl) + (1-sf)*sl;
-        c = (1-sg)*(1-sl) + sf*sl;
-        w = Math.atan(Math.sqrt(s/c));
-        r = Math.sqrt(s*c)/w;
-        d = 2*w*a;
-        h1 = (3*r -1)/2/c;
-        h2 = (3*r +1)/2/s;        
-        return d*(1 + fl*(h1*sf*(1-sg) - h2*(1-sf)*sg));
-    };
+    
 
     /**
      * Get all the users' IDs.
@@ -252,28 +248,6 @@ var Connection = function() {
     this.id = null;
 
     /**
-     * The user that sends files.
-     * @type {Object}
-     */
-    this.sender = null;
-    /**
-     * Whether sender has confirmed to send.
-     * @type {Boolean}
-     */
-    this.senderConfirmed = false;
-
-    /**
-     * The user that receives files.
-     * @type {Object}
-     */
-    this.receiver = null;
-    /**
-     * Whether receiver has confirmd to receive.
-     * @type {Boolean}
-     */
-    this.receiverConfirmed = false;
-
-    /**
      * The status of this connection.
      * Can be:
      *     INIT: just inited
@@ -318,7 +292,7 @@ var Connection = function() {
      *  initialize the matrix. all set to false
      *  @param  {Number}    max
      */
-    this.setMat = function(max) {
+    this.newFileUpload = function(max) {
         if(this.maxseq)
             return;
         this.maxseq = max;
@@ -348,8 +322,6 @@ var Connection = function() {
         return this.regrouper.regroup(senderID,this.pathArray);
     }
 
-    //refactor
-
     /**
      *  @type   {Object}
      */
@@ -372,6 +344,21 @@ var Connection = function() {
         this.receiverConfirmed = false;
     }
 
+    this.getTheOther = function(userID){
+        // var legal = this.clients[0] && this.clients[1] && (this.clients[0].id === userID || this.clients[1].id === userID);
+        // if(!legal){
+        //     console.log("illegal!");
+        //     return null;
+        // }
+        if(this.clients[0].id == userID)    //these are not the same type
+            return this.clients[1];
+        else
+            return this.clients[0];
+    }
+
+    /**
+     *  depreciate
+     */
     this.userConfirmed = function(userID) {
         var legal = this.clients[0].id === userID || this.clients[1].id === userID;
         if(!legal)
@@ -386,18 +373,27 @@ var Connection = function() {
     this.isBothConfirmed = function() {
         return this.clientsConfirmed[0] && this.clientsConfirmed[1];
     }
+    /**
+     * The user that sends files.
+     * @type {Object}
+     */
+    this.sender = null;
+    /**
+     * Whether sender has confirmed to send.
+     * @type {Boolean}
+     */
+    this.senderConfirmed = false;
 
-    this.getTheOther = function(userID){
-        // var legal = this.clients[0] && this.clients[1] && (this.clients[0].id === userID || this.clients[1].id === userID);
-        // if(!legal){
-        //     console.log("illegal!");
-        //     return null;
-        // }
-        if(this.clients[0].id == userID)    //these are not the same type
-            return this.clients[1];
-        else
-            return this.clients[0];
-    }
+    /**
+     * The user that receives files.
+     * @type {Object}
+     */
+    this.receiver = null;
+    /**
+     * Whether receiver has confirmd to receive.
+     * @type {Boolean}
+     */
+    this.receiverConfirmed = false;
 };
 
 
@@ -433,14 +429,7 @@ var Pairs = function() {
         return this._connections[conID];
     };
 
-    /**
-     * Help speed up the search of connections from users' IDs.
-     * 'senderID / receiverID' => its connection id
-     * NOTE: not used yet..
-     * @type {Object}
-     */
-    this._indices = {};
-
+    
     /**
      * Remove the connection relative to this user.
      * @param  {Number}   conID    The ID of the connection.
@@ -449,7 +438,7 @@ var Pairs = function() {
      *                             The other user will be passed in.
      *                             Optional.
      */
-    this.clear = function(conID, fromUserID, callback) {
+    this.remove = function(conID, fromUserID, callback) {
         if (!(conID in this._connections)) {
             return;
         }
@@ -491,6 +480,16 @@ var Pairs = function() {
     };
 
     /**
+     *  depreciate
+     */
+     /**
+     * Help speed up the search of connections from users' IDs.
+     * 'senderID / receiverID' => its connection id
+     * NOTE: not used yet..
+     * @type {Object}
+     */
+    this._indices = {};
+    /**
      * A user confirms to share files.
      * @param  {Number} conID  The ID of the connection.
      * @param  {Number} userID The ID of the user that confirms.
@@ -504,8 +503,8 @@ var Pairs = function() {
         con.userConfirmed(userID);
         return con.isBothConfirmed();
     };
-
-    /**
+    
+        /**
      * For debugging, get all the ids of the connections.
      * @return {Object} An array of objects.
      */
@@ -526,6 +525,7 @@ var Pairs = function() {
         }
         return outputs;
     };
+
 };
 
 
