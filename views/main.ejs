@@ -18,20 +18,25 @@
             <p class="row">
                 <a class="btn btn-primary btn-large span3" href="javascript:pairButton.click();">Find someone nearby!</a>
                 <a class="btn btn-primary btn-large span3" id="fileDelegate" href="javascript:sendFile.click();" >Select file</a>
-                
+                <section>
+                    <div class="row-fluid">
+                        <table class="whitefont table span12" id="pairTable">
+                            <thead class="row">
+                                <tr>
+                                    <th class="span4">NAME</th>
+                                    <th class="span4">DISTANCE</th>
+                                    <th class="span4">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </p>
-            
-            <table class="whitefont table" border="1" id="pairTable">
-            <tr>
-                <th>test1</th>
-                <th>test2</th>
-            </tr>
-            <tr>
-                <td>failed</td>
-                <td><button class="btn btn-small">testbutton</button></td>
-            </tr>
+
             <canvas id="canvas" class="media" width="1" height="1"/>
-        </table>
         </div>
         
         <div class="middiv">
@@ -56,7 +61,6 @@
                         </span>
                     </a>
                 </div>
-                
                 
             </form>
             <progress value="1" max="100" hidden id="uploadProgress"></progress>

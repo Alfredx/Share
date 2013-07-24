@@ -31,23 +31,21 @@ var showMessage = function(msg,id){
 }
 
 
-// file selector
 var fileField = document.getElementById('sendFile');
 var fileDelegate = document.getElementById('fileDelegate');
-// output 
 var outputField = document.getElementById('selectedList');
-// buttons
+var tableField = document.getElementById('pairTable');
 var sendButton = document.getElementById('sendButton');
 var receiveButton = document.getElementById('receiveButton');
 var pairButton = document.getElementById('pairButton');
 var pairSendButton = document.getElementById('pairSendButton');
 var downloadButton = document.getElementById('downloadButton');
-// progress bar for sharing
 var progressBar = document.getElementById('uploadProgress');
-// the <a> for downloading
 var downloadLink = document.getElementById('downloadLink');
-// canvas to show image
 var canvasField = document.getElementById('canvas');
+
+var tableInterval = null;
+var tableData = {};
 
 /**
  * The information of file to send.
@@ -402,12 +400,13 @@ var sendImageCoords = function(socket,x,y) {
         return;
     }
     if (navigator.geolocation) {
-        getGeolocation();
+        getGeolocation(socket);
     }
     else{
        showMessage("Your browser does not support Geolocation",'geo');
        return;
     }
+    console.log(geo);
     socket.emit('findPair',{
         'id': id,
         'geo':geo
@@ -551,15 +550,18 @@ var uploadAChunk = function(chunk, seq, conID) {
 /**
  * Init and save the geolocation data.
  */
-var getGeolocation = function() {
+var getGeolocation = function(socket) {
     var onSuccess = function(pos) {
         geo = {
             'latitude': pos.coords.latitude,
             'longitude': pos.coords.longitude,
             'accuracy': pos.coords.accuracy
         };
-        alert(geo.latitude +" " + geo.longitude + " "+ geo.accuracy);
-
+        // alert(geo.latitude +" " + geo.longitude + " "+ geo.accuracy);
+        socket.emit('geoLocationUpdate', {
+            'id':id,
+            'geo':geo
+        });
     };
     var onError = function(err) {
         var errors = {
@@ -688,6 +690,52 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
     }
 };
 
+var startQueryUsersNearby = function(socket){
+    socket.emit('usersNearby',{
+        'id':id,
+        'geo':geo
+    });
+};
+
+var queryUsersNearbyCallback = function(id,name,distance,status){
+    var rows = tableField.rows;
+    // for(var i = 1; i < rows.length; i++){
+    //     if(rows[i].cells[0].innerHTML == name)
+    // }
+    if(tableData[id]){
+        return;
+        clearTimeout(tableData[id].timer);
+        tableData[id].timer = setTimeout(function(){
+            for(var i = 1; i < tableField.rows.length; i++){
+                if(tableField.rows[i].cells[0].innerHTML == name){
+                    delete tableData[id];
+                    tableField.deleteRow(i);
+                }
+            }
+        },10000);
+    }
+    else{
+        tableData[id] = new Object();
+        tableData[id].name = name;
+        tableData[id].distance = distance;
+        tableData[id].status = status;
+        var row = tableField.insertRow(1);
+        var cell_name = row.insertCell(0);
+        var cell_distance = row.insertCell(1);
+        var cell_status = row.insertCell(2);
+        cell_name.innerHTML = name;
+        cell_distance.innerHTML = distance;
+        cell_status.innerHTML = status;
+        tableData[id].timer = setTimeout(function(){
+            for(var i = 1; i < tableField.rows.length; i++){
+                if(tableField.rows[i].cells[0].innerHTML == name){
+                    delete tableData[id];
+                    tableField.deleteRow(i);
+                }
+            }
+        },10000);
+    }
+};
 /**
  * Init and try to connect to server.
  */
@@ -702,7 +750,6 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
         return;
     }
     // All APIs supported
-    getWindowsWidthAndHeight();
 
     socket = io.connect('/');
 
@@ -739,15 +786,16 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
             id = data;
             showMessage('Connected, id is ' + data);
         }
-        if (navigator.geolocation)
-            getGeolocation();
-        else
-           showMessage("Your browser does not support Geolocation",'geo');
         var name = prompt("To receive better experience\nPlease tell us your name:","(your name here)");
         socket.emit('iam', {
             'id' : id,
+            'name':name,
             'geo': geo
         });
+        if (navigator.geolocation)
+           getGeolocation(socket);
+        else
+           showMessage("Your browser does not support Geolocation",'geo');
     });
 
     socket.on('IDexpired', function(data) {
@@ -809,7 +857,11 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
     socket.on('downloadLink', function(data) {
         downloadLink.href = data;
         downloadButton.hidden = false;
-    })
+    });
+
+    socket.on('userInArea',function(data){
+        queryUsersNearbyCallback(data.id,data.name,data.distance,data.status);
+    });
     
     /**
      * Try to get geolocation on initialization
@@ -831,14 +883,18 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
 
     pairSendButton.onclick = function() {
         pairedSend(socket);
-    }
+    };
 
     downloadButton.onclick = function() {
         if(downloadLink.href === null)
             return;
         downloadLink.click();
-    }
-
+    };
+    getWindowsWidthAndHeight();
+    
+    tableInterval = setInterval(function(){
+        startQueryUsersNearby(socket);
+    },5000);
     /*********************************************************************/
     //depreciate socket message
     /**

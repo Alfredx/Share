@@ -72,3 +72,7 @@ background-image: url(../img/texture.png);
 font-family: 'Poiret One', cursive;
 -webkit-user-select: none;
 }
+
+.table-adjust{
+	margin-left: 0px;
+}

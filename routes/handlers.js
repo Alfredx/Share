@@ -37,7 +37,7 @@ var socketID = 0;
 
 var toPair = new Users();
 
-var allUsers = new Users();
+var onlineUsers = new Users(); var offlineUsers = new Users();
 
 /**
  * Managing all the connections that have been paired.
@@ -76,23 +76,30 @@ var parsePort = function(socket) {
  * @param  {Object} geo         Null or A JSON object that contains latitude, longitude and accuracy.
  */
 var onFindPair = function(socket, userID, geo) {
-    toPair.remove(userID);
+    // toPair.remove(userID);
 
-    var user = new UserData();
-    user.id = userID;
-    user.socket = socket;
-    user.ip = parseAddress(socket);
-    user.port = parsePort(socket);
+    // var user = new UserData();
+    // user.id = userID;
+    // user.socket = socket;
+    // user.ip = parseAddress(socket);
+    // user.port = parsePort(socket);
+    // if(geo){
+    //     user.geoLatitude = geo.latitude;
+    //     user.geoLongitude = geo.longitude;
+    //     user.geoAccuracy = geo.accuracy;
+    // }
+    var user = onlineUsers.get(userID);
     if(geo){
-        user.geoLatitude = geo.latitude;
-        user.geoLongitude = geo.longitude;
-        user.geoAccuracy = geo.accuracy;
+        onlineUsers.get(userID).geo = geo;
     }
-
-    var partner = toPair.findNearestUser(user);
+    var partner = onlineUsers.findNearestUser(user);
+    // console.log(user);
+    // console.log(partner);
     if (partner) {
         // successfully finds someone to pair, add into connection dict
         var conID = paired.add(user, partner);
+        onlineUsers.get(user.id).status = 'busy';
+        onlineUsers.get(partner.id).status = 'busy';
         user.socket.emit('pairSucceeded', {
             'connectionID': conID,
             'partnerID': partner.id
@@ -113,29 +120,49 @@ var onFindPair = function(socket, userID, geo) {
 };
 
 
-var onNewConnection = function(socket, id, geo){
+var onNewConnection = function(socket, id, geo, name){
     var user = new UserData();
     user.id = id;
+    user.name = name;
     user.socket = socket;
     user.ip = parseAddress(socket);
     user.port = parsePort(socket);
     if(geo){
-        user.geoLatitude = geo.latitude;
-        user.geoLongitude = geo.longitude;
-        user.geoAccuracy = geo.accuracy;
+        user.geo = geo;
     }
-    allUsers.add(user);
+    onlineUsers.add(user);
     console.log('User connected.. [ID] ' + id + ' assigned');
-}
+};
+
+var offline = function(userID) {
+    disconnectTimers[userID] = onlineUsers.disconnectTimer(userID,disconnectCallback);
+    offlineUsers.add(onlineUsers.get(userID));
+    onlineUsers.remove(userID);
+};
 
 var disconnectCallback = function(user){
     // toSend.remove(user.id);
     // toReceive.remove(user.id);
     toPair.remove(user.id);
-    allUsers.remove(user.id);
+    offlineUsers.remove(user.id);
     disconnectTimers[user.id] = null;
     //TODO!! tell others this user has disconnected
-}
+};
+
+var onUsersNearby = function(socket, id, geo){
+    var baseUser = onlineUsers.get(id);
+    if(!baseUser)
+        return;
+    var users = onlineUsers.usersNearby(baseUser);
+    for(var uid in users){
+        socket.emit('userInArea',{
+            'name':users[uid].name,
+            'id':users[uid].id,
+            'distance':users[uid].distance.toFixed(1),
+            'status':users[uid].status
+        });
+    }
+};
 
 
 /**
@@ -153,11 +180,13 @@ var initSocket = function(socket) {
             clearTimeout(timer);
             disconnectTimers[assignedID] = null;
             assignedID = data.id;
+            onlineUsers.add(offlineUsers.get(assignedID));
+            offlineUsers.remove(assignedID);
             console.log('User reconnected.. [ID] ' + assignedID);
         }
         else{
             socket.emit('IDexpired',assignedID);
-            onNewConnection(socket,assignedID,data.geo);
+            onNewConnection(socket,assignedID,data.geo,data.name);
         }
     });
 
@@ -172,7 +201,7 @@ var initSocket = function(socket) {
         // toSend.remove(assignedID);
         // toReceive.remove(assignedID);
         console.log('User disconnected.. [ID] ' + assignedID);
-        disconnectTimers[assignedID] = allUsers.disconnectTimer(assignedID,disconnectCallback);
+        offline(assignedID);
     });
 
     /**
@@ -210,6 +239,22 @@ var initSocket = function(socket) {
         downloadURL = '/download?path=' + encodeURIComponent(downloadURL) +
                         '&name=' + encodeURIComponent(con.fileName);
         con.getTheOther(senderID).socket.emit('downloadLink', downloadURL);
+    });
+
+    socket.on('usersNearby',function(data){
+        var id = data.id;
+        var geo = data.geo;
+        onUsersNearby(socket,id,geo);
+    });
+
+    socket.on('geoLocationUpdate',function(data){
+        var id = data.id;
+        var geo = data.geo;
+        var user = onlineUsers.get(id);
+        if(user){
+            user.geo = geo;
+            console.log('user ' + id + ' geo updated');
+        }
     });
 
 

@@ -11,7 +11,11 @@ var fs = require('fs');
  * @param {Number} lng2 The longitude of location 2
  * @return {Number}     The distance between two locations
  */
-var geoDistance = function(lat1, lng1, lat2, lng2){
+var geoDistance = function(geo1, geo2){
+    var lat1 = geo1.latitude;
+    var lng1 = geo1.longitude;
+    var lat2 = geo2.latitude;
+    var lng2 = geo2.longitude;
     var getRad = function(d){
         return d*Math.PI/180.0;
     };
@@ -45,6 +49,7 @@ var UserData = function() {
      */
     this.id = null;
     this.name = null;
+    this.status = 'available';
     /**
      * Socket object used in socket.io.
      * @type {Object}
@@ -62,7 +67,25 @@ var UserData = function() {
      */
     this.port = null;
 
+    this.geo = null;
+
     /**
+     * The name of the file user wants to send.
+     * Or null if user just want to receive.
+     * @type {String}
+     */
+    this.fileName = null;
+    /**
+     * The size of the file user wants to send.
+     * Or null if user just want to receive.
+     * @type {Number}
+     */
+    this.fileSize = null;
+
+    /**
+     *  @depreciate
+     */
+     /**
      * The longitude of geolocation.
      * @type {Number}
      */
@@ -77,19 +100,6 @@ var UserData = function() {
      * @type {Number}
      */
     this.geoAccuracy = null;
-
-    /**
-     * The name of the file user wants to send.
-     * Or null if user just want to receive.
-     * @type {String}
-     */
-    this.fileName = null;
-    /**
-     * The size of the file user wants to send.
-     * Or null if user just want to receive.
-     * @type {Number}
-     */
-    this.fileSize = null;
 };
 
 
@@ -163,7 +173,11 @@ var Users = function() {
         var minDistance = 6378137.0;
         var targetUser = null;
         for(var uid in this._store){
-            var distance = geoDistance(this._store[uid].geoLatitude, this._store[uid].geoLongitude, baseUser.geoLatitude, baseUser.geoLongitude);
+            if(baseUser.id == uid)
+                continue;
+            if(!this._store[uid].geo || !baseUser.geo)
+                continue;
+            var distance = geoDistance(this._store[uid].geo, baseUser.geo);
             console.log("[distance User"+baseUser.id+" and "+uid+"] " + distance);
             if(distance < minDistance){
                 minDistance = distance;
@@ -175,6 +189,22 @@ var Users = function() {
         return targetUser;
 
     };
+
+    this.usersNearby = function(baseUser) {
+        var users = {};
+        for(var uid in this._store){
+            if(baseUser.id == uid)
+                continue;
+            if(!this._store[uid].geo || !baseUser.geo)
+                continue;
+            var distance = geoDistance(this._store[uid].geo, baseUser.geo);
+            if(distance < MAXDISTANCE){
+                users[uid] = this._store[uid];
+                users[uid].distance = distance;
+            }
+        }
+        return users;
+    }
     
 
     /**
