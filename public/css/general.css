@@ -63,7 +63,7 @@ font-family: 'Quicksand', sans-serif;
 }
 
 .middiv{
-	left: 100px;
+	margin: 0 auto; 
 }
 
 body{
@@ -71,8 +71,31 @@ background: #3C3C3C;
 background-image: url(../img/texture.png);
 font-family: 'Poiret One', cursive;
 -webkit-user-select: none;
+text-align:center;
+}
+div{
+	text-align:center;
+}
+.midtable{
+	margin: 0 auto;
+	text-align:center;
+}
+.midtable table{
+	text-align:center;
+
+}
+.midtable th{
+	text-align:center;
+}
+.midtable td{
+	text-align:center;
 }
 
 .table-adjust{
 	margin-left: 0px;
+}
+
+.background{
+	background: #3C3C3C;
+	/*background-image: url(../img/2.jpg);*/
 }

@@ -724,7 +724,7 @@ var queryUsersNearbyCallback = function(id,name,distance,status){
         tableData[id].status = status;
         for (var i = 0; i < rows.length; i++) {
             if(rows[i].cells[0].innerHTML == name){
-                rows[i].cells[1].innerHTML = distance;
+                rows[i].cells[1].innerHTML = distance+'M';
                 rows[i].cells[2].innerHTML = status;
             }
         };
@@ -741,7 +741,7 @@ var queryUsersNearbyCallback = function(id,name,distance,status){
         var cell_distance = row.insertCell(1);
         var cell_status = row.insertCell(2);
         cell_name.innerHTML = name;
-        cell_distance.innerHTML = distance;
+        cell_distance.innerHTML = distance+'M';
         cell_status.innerHTML = status;
         tableData[id].timer = rowTimer(id,name);
         row.onclick = function(){
@@ -853,6 +853,9 @@ var onload = function(socket){
         isFileCompleted = true;
         isFileSent = false;
         showMessage("Succeeded on making pair with " + data.partnerName);
+        
+        tableField.style.visibility = "hidden";
+        clearInterval(tableInterval);
     });
 
     /**
