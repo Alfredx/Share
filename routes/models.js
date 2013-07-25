@@ -114,7 +114,8 @@ var Users = function() {
      * @type {Object}
      */
     this._store = {};
-
+    //store targetID for pairTo
+    this.couple = {};
     /**
      * Remove the user's data in store.
      * @param  {Number} userID The ID of the user to be removed.
@@ -144,16 +145,18 @@ var Users = function() {
      * @param  {Object} user       The user to be added.
      * @param  {Function} callback To be called when it expires. The user will be passed.
      */
-    this.addTillExpire = function(user, callback) {
+    this.addTillExpire = function(user, targetID, callback) {
         this._store[user.id] = user;
-
+        this.couple[user.id] = targetID;
         var theID = user.id;
         var store = this._store;
+        var coup = this.couple;
         setTimeout(function() {
             if (theID in store) {
                 var u = store[theID];
                 callback(u);
                 delete store[theID];
+                delete coup[theID];
             }
         }, TIMEOUT);
     };
@@ -372,7 +375,7 @@ var Connection = function() {
         this.receiver = user2;
         this.senderConfirmed = false;
         this.receiverConfirmed = false;
-    }
+    };
 
     this.getTheOther = function(userID){
         // var legal = this.clients[0] && this.clients[1] && (this.clients[0].id === userID || this.clients[1].id === userID);
@@ -384,7 +387,12 @@ var Connection = function() {
             return this.clients[1];
         else
             return this.clients[0];
-    }
+    };
+
+    this.free = function(){
+        this.clients[0].status = 'available';
+        this.clients[1].status = 'available';
+    };
 
     /**
      *  depreciate
@@ -481,9 +489,11 @@ var Pairs = function() {
             callback(con.getTheOther(fromUserID));
         }
 
+        con.free();
         delete this._connections[conID];
         delete this._indices[sender.id];
         delete this._indices[receiver.id];
+
     };
 
     /**

@@ -112,12 +112,38 @@ var onFindPair = function(socket, userID, geo) {
         toPair.remove(partner.id);
     } else {
         // fails to pair
-        toPair.addTillExpire(user, function(u) {
+        toPair.addTillExpire(user, null, function(u) {
             u.socket.emit('pairFailed');
         });
     }
 
 };
+
+var onPairTo = function(socket, id, targetID){
+    var targetUser = toPair.get(targetID);
+    var user = onlineUsers.get(id);
+    if(targetUser && toPair.couple[targetID] === id){
+        var conID = paired.add(user, targetUser);
+        user.status = 'busy';
+        targetUser.status = 'busy';
+        user.socket.emit('pairSucceeded', {
+            'connectionID': conID,
+            'partnerID': targetID,
+            'partnerName':targetUser.name
+        });
+        targetUser.socket.emit('pairSucceeded', {
+            'connectionID': conID,
+            'partnerID': id,
+            'partnerName':user.name
+        });
+        toPair.remove(targetID);
+    }
+    else {
+        toPair.addTillExpire(user,targetID, function(u) {
+            u.socket.emit('pairFailed');
+        })
+    }
+}
 
 
 var onNewConnection = function(socket, id, geo, name){
@@ -221,6 +247,10 @@ var initSocket = function(socket) {
         onFindPair(socket, data.id, data.geo);
     });
 
+    socket.on('pairTo',function(data) {
+        onPairTo(socket, data.id, data.targetID);
+    });
+
     socket.on('imageCoords', function(data) {
         var senderID = data.sender;
         var conID = data.conID;
@@ -253,7 +283,6 @@ var initSocket = function(socket) {
         var user = onlineUsers.get(id);
         if(user){
             user.geo = geo;
-            console.log('user ' + id + ' geo updated');
         }
     });
 

@@ -406,7 +406,6 @@ var sendImageCoords = function(socket,x,y) {
        showMessage("Your browser does not support Geolocation",'geo');
        return;
     }
-    console.log(geo);
     socket.emit('findPair',{
         'id': id,
         'geo':geo
@@ -421,7 +420,25 @@ var pairedSend = function(socket){
     else{
         showMessage("you don't have a partner yet");
     }
+};
 
+var pairTo = function(socket,targetID,targetName) {
+    if (!isConnected) {
+        alert("Not connected to server => unable to share!");
+        return;
+    }
+    if (navigator.geolocation) {
+        getGeolocation(socket);
+    }
+    else{
+       showMessage("Your browser does not support Geolocation",'geo');
+       return;
+    }
+    socket.emit('pairTo',{
+        'id':id,
+        'targetID':targetID
+    });
+    showMessage("Waiting for "+targetName+"\'s response...");
 }
 
 /**
@@ -703,16 +720,16 @@ var queryUsersNearbyCallback = function(id,name,distance,status){
     //     if(rows[i].cells[0].innerHTML == name)
     // }
     if(tableData[id]){
-        return;
-        clearTimeout(tableData[id].timer);
-        tableData[id].timer = setTimeout(function(){
-            for(var i = 1; i < tableField.rows.length; i++){
-                if(tableField.rows[i].cells[0].innerHTML == name){
-                    delete tableData[id];
-                    tableField.deleteRow(i);
-                }
+        tableData[id].distance = distance;
+        tableData[id].status = status;
+        for (var i = 0; i < rows.length; i++) {
+            if(rows[i].cells[0].innerHTML == name){
+                rows[i].cells[1].innerHTML = distance;
+                rows[i].cells[2].innerHTML = status;
             }
-        },10000);
+        };
+        clearTimeout(tableData[id].timer);
+        tableData[id].timer = rowTimer(id,name);
     }
     else{
         tableData[id] = new Object();
@@ -726,15 +743,37 @@ var queryUsersNearbyCallback = function(id,name,distance,status){
         cell_name.innerHTML = name;
         cell_distance.innerHTML = distance;
         cell_status.innerHTML = status;
-        tableData[id].timer = setTimeout(function(){
-            for(var i = 1; i < tableField.rows.length; i++){
-                if(tableField.rows[i].cells[0].innerHTML == name){
-                    delete tableData[id];
-                    tableField.deleteRow(i);
-                }
-            }
-        },10000);
+        tableData[id].timer = rowTimer(id,name);
+        row.onclick = function(){
+            var id_ = id;
+            var name_ = name;
+            pairTo(socket,id_,name_);
+        }
     }
+};
+
+var rowTimer = function(id, name){
+    var timer = setTimeout(function(){
+        for(var i = 1; i < tableField.rows.length; i++){
+            if(tableField.rows[i].cells[0].innerHTML == name){
+                delete tableData[id];
+                tableField.deleteRow(i);
+            }
+        }
+    },10000);
+    return timer;
+};
+
+var onload = function(socket){
+    if (navigator.geolocation)
+       getGeolocation(socket);
+    else
+       showMessage("Your browser does not support Geolocation",'geo');
+    getWindowsWidthAndHeight();
+    startQueryUsersNearby(socket);
+    tableInterval = setInterval(function(){
+        startQueryUsersNearby(socket);
+    },5000);
 };
 /**
  * Init and try to connect to server.
@@ -792,10 +831,7 @@ var queryUsersNearbyCallback = function(id,name,distance,status){
             'name':name,
             'geo': geo
         });
-        if (navigator.geolocation)
-           getGeolocation(socket);
-        else
-           showMessage("Your browser does not support Geolocation",'geo');
+        onload(socket);
     });
 
     socket.on('IDexpired', function(data) {
@@ -816,7 +852,7 @@ var queryUsersNearbyCallback = function(id,name,distance,status){
         isPaired = true;
         isFileCompleted = true;
         isFileSent = false;
-        showMessage("Succeeded on making pair with [user:] " + data.partnerID);
+        showMessage("Succeeded on making pair with " + data.partnerName);
     });
 
     /**
@@ -824,7 +860,7 @@ var queryUsersNearbyCallback = function(id,name,distance,status){
      */
     socket.on('pairFailed', function() {
         isPaired = false;
-        showMessage("Failed making a pair. It seems nobody is nearby.");
+        showMessage("Failed making pair. No response.");
     });
 
     
@@ -890,11 +926,7 @@ var queryUsersNearbyCallback = function(id,name,distance,status){
             return;
         downloadLink.click();
     };
-    getWindowsWidthAndHeight();
     
-    tableInterval = setInterval(function(){
-        startQueryUsersNearby(socket);
-    },5000);
     /*********************************************************************/
     //depreciate socket message
     /**
