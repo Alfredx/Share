@@ -685,8 +685,8 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
 };
 
 var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
-    fileDelegate.href = "javascript:void(0)";
-    fileDelegate.class = "btn btn-inverse btn-large span3";
+    // fileDelegate.href = "javascript:void(0)";
+    // fileDelegate.className = "btn btn-inverse btn-large span3";
     downloadButton.hidden = true;
     downloadLink.href = "";
     showMessage("Receiving file...",'upload');
@@ -854,7 +854,12 @@ var onload = function(socket){
         isFileSent = false;
         showMessage("Succeeded on making pair with " + data.partnerName);
         
-        tableField.style.visibility = "hidden";
+        tableField.hidden = true;
+        canvas.hidden = false;
+        canvas.className = "img-polaroid media background";
+        canvas.width = windowWidth*0.8;
+        canvas.height = windowHeight*0.8;
+        canvas.addEventListener("click", function(){fileField.click();}, false);
         clearInterval(tableInterval);
     });
 

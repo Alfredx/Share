@@ -15,29 +15,29 @@
         <div class="hero-unit bb">
             <h1>Share your screen<%= title %></h1>
             <p>Just Find someone nearby, select your file and drag it to the right!</p>
-            <p class="row">
+            <!-- <p class="row">
                 <a class="btn btn-primary btn-large span3" href="javascript:pairButton.click();">Find someone nearby!</a>
                 <a class="btn btn-primary btn-large span3" id="fileDelegate" href="javascript:sendFile.click();" >Select file</a>
-                    <div class="midtable">
-                        <table class="whitefont table span12" id="pairTable" hidden>
-                            <thead class="row-fluid">
-                                <tr style="vertical-align:middle;text-align:center;">
-                                    <th class="span4">NAME</th>
-                                    <th class="span4">DISTANCE</th>
-                                    <th class="span4">STATUS</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                
-                            </tbody>
-                        </table>
-                    </div>
-                    <div>
-                        <canvas id="canvas" class="media img-polaroid background" />
-                    </div>
-            </p>
+            </p> -->
+            <div class="row-fluid midtable">
+                <table class="whitefont table" id="pairTable">
+                    <thead class="">
+                        <tr style="vertical-align:middle;text-align:center;">
+                            <th class="span4">NAME</th>
+                            <th class="span4">DISTANCE</th>
+                            <th class="span4">STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <canvas id="canvas" class="media background" width="0" height="0"/>
+            </div>  
         </div>
-        <div >
+        <div>
             <button class="btn-primary btn-large span4" type="button" id="downloadButton" hidden>Download</button>
             <output class="whitefont" id="selectedList">
                 <ul></ul>
