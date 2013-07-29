@@ -274,6 +274,7 @@ var initSocket = function(socket) {
     socket.on('usersNearby',function(data){
         var id = data.id;
         var geo = data.geo;
+        // console.log("user "+id+" finding users");
         onUsersNearby(socket,id,geo);
     });
 

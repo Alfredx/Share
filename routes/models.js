@@ -11,11 +11,14 @@ var fs = require('fs');
  * @param {Number} lng2 The longitude of location 2
  * @return {Number}     The distance between two locations
  */
+ //if two have the same geo, what will be the result?
 var geoDistance = function(geo1, geo2){
     var lat1 = geo1.latitude;
     var lng1 = geo1.longitude;
     var lat2 = geo2.latitude;
     var lng2 = geo2.longitude;
+    if(lat1 === lat2 && lng1 === lng2)
+        return 0;
     var getRad = function(d){
         return d*Math.PI/180.0;
     };
@@ -126,6 +129,8 @@ var Users = function() {
     };
 
     this.add = function(user){
+        if(!user)
+            return;
         this._store[user.id] = user;
     }
 

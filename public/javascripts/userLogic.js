@@ -86,6 +86,7 @@ var geo = null;
  */
 var context = canvas.getContext('2d');
 
+var selectText = "Tap here to selecet new file";
 /**
  *  The image object that displays the file
  *  @type {Object}
@@ -141,7 +142,6 @@ var currentChunk = 0;
 window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;
 window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || 
                                            window.webkitResolveLocalFileSystemURL;
-
 /**
  * Update the description for files selected dynamically.
  */
@@ -162,7 +162,7 @@ fileField.addEventListener('change', function(evt) {
         f = files[idx];
         var url = window.URL || window.webkitURL;
         var src = url.createObjectURL(f);
-        drawImageOnCanvas(src,0,0);
+        drawImageOnCanvas(src,null,null);
 
         selectedFile = {};
         // only the following properties are common
@@ -192,6 +192,35 @@ fileField.addEventListener('change', function(evt) {
 
 }, false);
 
+var canvasOnClick = function(event){
+    if(event.layerY < 45)
+        fileField.click();
+};
+
+var initCanvas = function(){
+    tableField.hidden = true;
+    clearInterval(tableInterval);
+    canvas.hidden = false;
+    canvas.className = "img-polaroid media background";
+    canvas.width = windowWidth*0.8;
+    canvas.height = windowHeight*0.8;
+    canvas.addEventListener("click", canvasOnClick, false);
+    writeOnCanvas(selectText,0.5);
+};
+
+var writeOnCanvas = function(text, opacity){
+    if(!opacity)
+        opacity = 1;
+    var fillStyle = 'rgba(255,255,255,'+opacity+')';
+    context.textAlign = 'center';
+    context.fillStyle = fillStyle;
+    context.textBaseline = 'top';
+    context.font = 'bold 20px sans-serif';
+    context.fillText(text,(canvas.width)/2, 0, canvas.width);
+    context.textAlign = 'start';
+    context.textBaseline = 'alphabetic';
+};
+
 /**
  *  Draw the selected file in canvas
  *  @param f {Object} The file just selected
@@ -199,28 +228,35 @@ fileField.addEventListener('change', function(evt) {
  */
 var drawImageOnCanvas = function(src,x,y){
     //show in canvas;
-    
     img = new Image();
     img.src = src;
 
     img.onload = function(){
-        imgWidth = windowWidth/1.2;
-        if(imgWidth > 400)
-            imgWidth = 400;
-        imgHeight = img.height*(imgWidth/img.width);
-        // context.clearRect(0,0,canvas.width,canvas.height);
-        if(canvas.height != imgHeight || canvas.width != imgWidth){
-            canvas.height = imgHeight;
-            canvas.width = imgWidth*1.2;
+        if(canvas.width > canvas.height){
+            imgHeight = canvas.height *0.8;
+            imgWidth = img.width*(imgHeight/img.height);
         }
         else{
-            canvas.width = canvas.width;
+            imgWidth = canvas.width * 0.8;
+            imgHeight = img.height*(imgWidth/img.width);
         }
-        if(x+imgWidth > 0){
-            context.drawImage(img,x,y,imgWidth,imgHeight);
+        // context.clearRect(0,0,canvas.width,canvas.height);
+        // if(canvas.height != imgHeight || canvas.width != imgWidth){
+        //     canvas.height = imgHeight;
+        //     canvas.width = imgWidth*1.2;
+        // }
+        // else{
+        //     canvas.width = canvas.width;
+        // }
+        canvas.width = canvas.width;
+        if(x === null && y === null){
+            context.drawImage(img,(canvas.width-imgWidth)/2,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
         }
+        else if(x+imgWidth > 0){
+            context.drawImage(img,x,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
+        }
+        writeOnCanvas(selectText,0.5);
         setMouseEvent();
-        
     }
 };
 
@@ -231,14 +267,15 @@ var setMouseEvent = function(){
     // var canvasOffset = canvas.offset();
     var offsetX = canvas.offsetLeft;
     var offsetY = canvas.offsetTop;
-    var imgX = img.offsetLeft;
-    var imgY = img.offsetTop;
+    var imgX = (canvas.width-imgWidth)/2
+    var imgY = (canvas.height-imgHeight)/2;
     var isDragging = false;
     var isDraggable = false;
     var canMouseX = 0;
     var canMouseY = 0;
 
-    function checkMouseInArea(){
+    function checkMouseOnImage(){
+        console.log(imgY);
         if(canMouseX < imgX || canMouseX > imgX+imgWidth || canMouseY < imgY || canMouseY > imgY+imgHeight)
             isDraggable = false;
         else
@@ -267,7 +304,7 @@ var setMouseEvent = function(){
     function onMouseDown(event){
         canMouseX = parseInt(event.layerX);
         canMouseY = parseInt(event.layerY);
-        if(!checkMouseInArea())
+        if(!checkMouseOnImage())
             return;
         imgOffsetX = canMouseX - imgX;
         imgOffsetY = canMouseY - imgY;
@@ -302,8 +339,8 @@ var setMouseEvent = function(){
             return;
         if(isDragging){
             canvas.width = canvas.width;
-            // context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
-            context.drawImage(img,canMouseX-imgOffsetX,0,imgWidth,imgHeight);
+            context.drawImage(img,canMouseX-imgOffsetX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
+            writeOnCanvas(selectText,0.5);
             var okToSend = isMouseInSendArea() && !isFileSent;
             if(okToSend){
                 pairedSend(socket);
@@ -316,7 +353,7 @@ var setMouseEvent = function(){
     function onTouchStart(event){
         canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
         canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
-        if(!checkMouseInArea())
+        if(!checkMouseOnImage())
             return;
         event.preventDefault();
         imgOffsetX = canMouseX - imgX;
@@ -347,8 +384,8 @@ var setMouseEvent = function(){
             return;
         if(isDragging){
             canvas.width = canvas.width;
-            context.drawImage(img,canMouseX-imgOffsetX,canMouseY-imgOffsetY,imgWidth,imgHeight);
-            context.drawImage(img,canMouseX-imgOffsetX,0,imgWidth,imgHeight);
+            context.drawImage(img,canMouseX-imgOffsetX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
+            writeOnCanvas(selectText,0.5);
             var okToSend = isMouseInSendArea() && !isFileSent;
             if(okToSend){
                 pairedSend(socket);
@@ -703,7 +740,7 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
 
     }
     else{
-        drawImageOnCanvas(data.fileURL,0,0);
+        drawImageOnCanvas(data.fileURL);
     }
 };
 
@@ -854,13 +891,7 @@ var onload = function(socket){
         isFileSent = false;
         showMessage("Succeeded on making pair with " + data.partnerName);
         
-        tableField.hidden = true;
-        canvas.hidden = false;
-        canvas.className = "img-polaroid media background";
-        canvas.width = windowWidth*0.8;
-        canvas.height = windowHeight*0.8;
-        canvas.addEventListener("click", function(){fileField.click();}, false);
-        clearInterval(tableInterval);
+        initCanvas();
     });
 
     /**
@@ -895,7 +926,7 @@ var onload = function(socket){
 
     socket.on('imageCoords', function(data) {
         // drawImageOnCanvas(fileMatrix[0].toURL(),data.X,data.Y);
-        drawImageOnCanvas(fileMatrix[0].toURL(),data.X,0);
+        drawImageOnCanvas(fileMatrix[0].toURL(),data.X);
     });
 
     socket.on('downloadLink', function(data) {
@@ -933,7 +964,10 @@ var onload = function(socket){
         if(downloadLink.href === null)
             return;
         downloadLink.click();
+        canvas.addEventListener("click",canvasOnClick,false);
     };
+
+
     
     /*********************************************************************/
     //depreciate socket message
