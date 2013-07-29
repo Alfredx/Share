@@ -251,6 +251,13 @@ var initSocket = function(socket) {
         onPairTo(socket, data.id, data.targetID);
     });
 
+    socket.on('startSending', function(data) {
+        var conID = data.connectionID;
+        var senderID = data.senderID;
+        var con = paired.get(conID);
+        con.getTheOther(senderID).socket.emit('startSending',null);
+    });
+
     socket.on('imageCoords', function(data) {
         var senderID = data.sender;
         var conID = data.conID;

@@ -148,12 +148,12 @@ window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
 fileField.addEventListener('change', function(evt) {
     var files = evt.target.files;
     if (files.length == 0) {
-        outputField.innerHTML = "<ul></ul>";
-        sendButton.disabled = true;
-        selectedFile = null;
-        //clear canvas
-        canvas.width = canvas.width;
-        img = null;
+        // outputField.innerHTML = "<ul></ul>";
+        // sendButton.disabled = true;
+        // selectedFile = null;
+        // //clear canvas
+        // canvas.width = canvas.width;
+        // img = null;
         return;
     }
 
@@ -275,7 +275,6 @@ var setMouseEvent = function(){
     var canMouseY = 0;
 
     function checkMouseOnImage(){
-        console.log(imgY);
         if(canMouseX < imgX || canMouseX > imgX+imgWidth || canMouseY < imgY || canMouseY > imgY+imgHeight)
             isDraggable = false;
         else
@@ -334,7 +333,7 @@ var setMouseEvent = function(){
         canMouseX = parseInt(event.layerX);
         canMouseY = parseInt(event.layerY);
         imgX += (canMouseX-oldX);
-        imgY += (canMouseY-oldY);
+        // imgY += (canMouseY-oldY);
         if(!isImgInCanvas())
             return;
         if(isDragging){
@@ -379,7 +378,7 @@ var setMouseEvent = function(){
         canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
         canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         imgX += (canMouseX-oldX);
-        imgY += (canMouseY-oldY);
+        // imgY += (canMouseY-oldY);
         if(!isImgInCanvas())
             return;
         if(isDragging){
@@ -452,7 +451,7 @@ var sendImageCoords = function(socket,x,y) {
 
 var pairedSend = function(socket){
     if(isPaired){
-        onStartSending(socket,gConID,id,gPartnerID);
+        startSending(socket,gConID,id,gPartnerID);
     }
     else{
         showMessage("you don't have a partner yet");
@@ -485,7 +484,7 @@ var pairTo = function(socket,targetID,targetName) {
  * @param  {Number} senderID   The ID of the sender.
  * @param  {Number} receiverID The ID of the receiver.
  */
-var onStartSending = function(socket, conID, senderID, receiverID) {
+var startSending = function(socket, conID, senderID, receiverID) {
     if(!selectedFile)
         return;
     if (id === senderID) {
@@ -498,10 +497,27 @@ var onStartSending = function(socket, conID, senderID, receiverID) {
         }
         
         showMessage("Uploading now...",'upload');
+        socket.emit('startSending', {
+            'connectionID': conID,
+            'senderID': senderID
+        });
     } else if (id === receiverID) {
         // self is the receiver
         showMessage("User " + senderID + " has started sending..",'upload');
     }
+};
+
+var onStartSending = function(socket){
+    outputField.innerHTML = "<ul></ul>";
+    selectedFile = null;
+    isFileCompleted = true;
+    isFileSent = false;
+    isFileDownloading = false;
+    canvas.width = canvas.width;
+    img = null;
+    canvas.removeEventListener("click",canvasOnClick,false);
+    selectText = "";
+    writeOnCanvas(selectText,0);
 };
 
 
@@ -675,14 +691,7 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
                 writer.onwriteend = function(){
                     if(fileMatrix[0]){
                         if(currentChunk == maxseq){
-                            isFileCompleted = true;
-                            isFileDownloading = false;
-                            fileDelegate.href = "javascript:sendFile.click();";
-                            showMessage("File received",'upload');
-                            socket.emit('allReceived',{
-                                'conID':gConID,
-                                'senderID':gPartnerID
-                            });
+                            onFileAllReceived(socket);
                             return;
                         }
                         if(fileMatrix[currentChunk+1]){
@@ -718,6 +727,17 @@ var regroupSlicedFile = function(responseBlob, seq, maxseq, fileName, socket){
         });
     },function(err){
         console.log("error when requesting FS");
+    });
+};
+
+var onFileAllReceived = function(socket){
+    isFileCompleted = true;
+    isFileDownloading = false;
+
+    showMessage("File received",'upload');
+    socket.emit('allReceived',{
+        'conID':gConID,
+        'senderID':gPartnerID
     });
 };
 
@@ -907,7 +927,7 @@ var onload = function(socket){
      * Both users confirmed, it's time to start sending.
      */
     socket.on('startSending', function(data) {
-        onStartSending(socket, data.connectionID, data.senderID, data.receiverID);
+        onStartSending(socket);
     });
 
     /**
@@ -964,6 +984,8 @@ var onload = function(socket){
         if(downloadLink.href === null)
             return;
         downloadLink.click();
+        selectText = "Tap here to select new file";
+        writeOnCanvas(selectText,0.5);
         canvas.addEventListener("click",canvasOnClick,false);
     };
 
