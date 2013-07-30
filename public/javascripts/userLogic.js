@@ -308,7 +308,7 @@ var setMouseEvent = function(){
     function isMouseInRejectArea() {
         if(!isReceiver)
             return false;
-        var result = (canMouseX<=(canvas.width/3));
+        var result = (canMouseX<=(canvas.width/4));
         return result;
     };
 
@@ -352,8 +352,11 @@ var setMouseEvent = function(){
             selectText = "Tap here to select new file";
             writeOnCanvas(selectText,0.5);
             canvas.addEventListener("click",canvasOnClick,false);
+            img = null;
             isSender = false;
             isReceiver = false;
+            downloadLink.href = "javascript:void(0);";
+            downloadButton.hidden = true;
         }
     };
 
@@ -510,7 +513,6 @@ var onSlide = function(imgX) {
             context.drawImage(img,imgX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
             onSlide(imgX);
         },50);
-        
     }
 };
 
@@ -531,6 +533,7 @@ var onReject = function(imgX) {
         isFileSent = false;
         isFileDownloading = false;
         setMouseEvent();
+        writeOnCanvas(selectText,0.5);
         canvas.addEventListener("click",canvasOnClick,false);
     }
 };
