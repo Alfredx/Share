@@ -294,6 +294,32 @@ var initSocket = function(socket) {
         }
     });
 
+    socket.on('slide',function(data){
+        var conID = data.connectionID;
+        var senderID = data.senderID;
+        var imgX = data.imgX;
+        var con = paired.get(conID);
+        con.getTheOther(senderID).socket.emit('slide',{
+            'imgX':imgX
+        });
+    });
+
+    socket.on('reject',function(data){
+        var conID = data.connectionID;
+        var senderID = data.senderID;
+        var imgX = data.imgX;
+        var con = paired.get(conID);
+        con.getTheOther(senderID).socket.emit('reject',{
+            'imgX':imgX
+        });
+    });
+
+    socket.on('downloadDone', function(data){
+        var conID = data.connectionID;
+        var senderID = data.senderID;
+        var con = paired.get(conID);
+        con.getTheOther(senderID).socket.emit('downloadDone',null);
+    });
 
     /*********************************************************
      *  depreciated socket message

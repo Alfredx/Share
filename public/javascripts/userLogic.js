@@ -92,6 +92,7 @@ var selectText = "Tap here to selecet new file";
  *  @type {Object}
  */
  var img = null;
+ var URL = null;
 
 /**
  *  The width and height of the image on canvas
@@ -111,12 +112,13 @@ var selectText = "Tap here to selecet new file";
  */
  var socket;
 
- var gConID;
- var gPartnerID;
+ var gConID = null;
+ var gPartnerID = null;
+ var gPartnerName = null;
 
  var isPaired = false;
 
-var SLICE = true;
+var SLICE = false;
 
 var BYTES_PER_CHUNK = 1024*100;
 
@@ -126,6 +128,8 @@ var BYTES_PER_CHUNK = 1024*100;
  var isFileCompleted = true;
  var isFileSent = false;
  var isFileDownloading = false;
+ var isSender = false;
+ var isReceiver = false;
 
 /**
  *  File Matrix. To save all the chunks received
@@ -160,6 +164,10 @@ fileField.addEventListener('change', function(evt) {
     output = [];
     for (var idx = 0, size = files.length; idx < size; idx++) {
         f = files[idx];
+        if(f['size'] > 102400){
+            alert("Please do not choose a file over 100KB");
+            return;
+        }
         var url = window.URL || window.webkitURL;
         var src = url.createObjectURL(f);
         drawImageOnCanvas(src,null,null);
@@ -189,7 +197,6 @@ fileField.addEventListener('change', function(evt) {
     isFileCompleted = true;
     isFileSent = false;
     isFileDownloading = false;
-
 }, false);
 
 var canvasOnClick = function(event){
@@ -228,6 +235,19 @@ var writeOnCanvas = function(text, opacity){
  */
 var drawImageOnCanvas = function(src,x,y){
     //show in canvas;
+    // if(!img){
+    //     img = new Image();
+    //     img.src = src;
+    // }
+    // else{
+    //     var aa = img.src.split("?");
+    //     var bb = src.split("?");
+    //     if(aa[1] != bb[1]){
+    //         console.log("new Image");
+    //         img = new Image();
+    //         img.src = src;    
+    //     }
+    // }
     img = new Image();
     img.src = src;
 
@@ -240,14 +260,6 @@ var drawImageOnCanvas = function(src,x,y){
             imgWidth = canvas.width * 0.8;
             imgHeight = img.height*(imgWidth/img.width);
         }
-        // context.clearRect(0,0,canvas.width,canvas.height);
-        // if(canvas.height != imgHeight || canvas.width != imgWidth){
-        //     canvas.height = imgHeight;
-        //     canvas.width = imgWidth*1.2;
-        // }
-        // else{
-        //     canvas.width = canvas.width;
-        // }
         canvas.width = canvas.width;
         if(x === null && y === null){
             context.drawImage(img,(canvas.width-imgWidth)/2,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
@@ -282,14 +294,68 @@ var setMouseEvent = function(){
         return isDraggable;
     };
 
-    function isMouseInSendArea(){
+    function isMouseInSlideArea(){
         // if((canMouseX <= 100) || (canMouseX >= canvas.width-100))
         //     return true;
         // else
         //     return false;
-        var result = (imgX+img.width) > canvas.width
+        if(!isSender)
+            return false;
+        var result = (canMouseX>=(canvas.width*2/3));
         return result;
-    }
+    };
+
+    function isMouseInRejectArea() {
+        if(!isReceiver)
+            return false;
+        var result = (canMouseX<=(canvas.width/3));
+        return result;
+    };
+
+    function slide() {
+        if(imgX < canvas.width){
+            setTimeout(function(){
+                writeOnCanvas(selectText,0.5);
+                imgX += 10;
+                canvas.width = canvas.width;
+                context.drawImage(img,imgX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
+                sendImageCoords(socket,imgX-canvas.width,(canvas.height-imgHeight)/2);
+                slide();
+            },50);
+        }
+        else{
+            canvas.removeEventListener("click",canvasOnClick,false);
+            socket.emit('slide',{
+                'imgX':imgX-canvas.width,
+                'connectionID':gConID,
+                'senderID':id
+            });
+        }
+    };
+
+    function reject() {
+        if(imgX+imgWidth > 0){
+            setTimeout(function(){
+                imgX -= 40;
+                canvas.width = canvas.width;
+                context.drawImage(img,imgX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
+                sendImageCoords(socket,canvas.width+imgX,(canvas.height-imgHeight)/2);
+                reject();
+            },50);
+        }
+        else{
+            socket.emit('reject',{
+                'imgX':canvas.width+imgX,
+                'connectionID': gConID,
+                'senderID':id
+            });
+            selectText = "Tap here to select new file";
+            writeOnCanvas(selectText,0.5);
+            canvas.addEventListener("click",canvasOnClick,false);
+            isSender = false;
+            isReceiver = false;
+        }
+    };
 
     function isImgInCanvas(){
         // if(imgY >= 0 && imgY+imgHeight < canvas.height)
@@ -298,7 +364,7 @@ var setMouseEvent = function(){
         //     return false;
         //TODO: can I drag up to send an img
         return true;
-    }
+    };
 
     function onMouseDown(event){
         canMouseX = parseInt(event.layerX);
@@ -313,15 +379,24 @@ var setMouseEvent = function(){
     function onMouseUp(event){
         canMouseX = parseInt(event.layerX);
         canMouseY = parseInt(event.layerY);
+        if(isMouseInSlideArea() && checkMouseOnImage() && selectedFile)
+            slide();
+        if(isMouseInRejectArea() && checkMouseOnImage()){
+            reject();
+            showMessage("You have rejected file from "+gPartnerName);
+        }
+
         isDragging = false;
         isDraggable = false;
     };
 
     function onMouseOut(event){
-        canMouseX = parseInt(event.layerX);
-        canMouseY = parseInt(event.layerY);
-        // if(isMouseInSendArea() && isDragging)
-        //     pairToSend(socket);
+        if(isMouseInSlideArea() && checkMouseOnImage() && selectedFile)
+            slide();
+        if(isMouseInRejectArea() && checkMouseOnImage()){
+            reject();
+            showMessage("You have rejected file from "+gPartnerName);
+        }
         isDragging = false;
         isDraggable = false;
     };
@@ -333,19 +408,20 @@ var setMouseEvent = function(){
         canMouseX = parseInt(event.layerX);
         canMouseY = parseInt(event.layerY);
         imgX += (canMouseX-oldX);
-        // imgY += (canMouseY-oldY);
         if(!isImgInCanvas())
             return;
         if(isDragging){
             canvas.width = canvas.width;
             context.drawImage(img,canMouseX-imgOffsetX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
             writeOnCanvas(selectText,0.5);
-            var okToSend = isMouseInSendArea() && !isFileSent;
+            var okToSend =  !isFileSent;
             if(okToSend){
                 pairedSend(socket);
             }
+            // if(isReceiver)
+            //     sendImageCoords(socket,canvas.width+imgX,(canvas.height-imgHeight)/2);
+            // else
             sendImageCoords(socket,canMouseX-imgOffsetX-canvas.width,canMouseY-imgOffsetY);
-            //console.log(canMouseX + " " +canMouseY);
         }
     };
     
@@ -365,9 +441,12 @@ var setMouseEvent = function(){
         // canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         isDragging = false;
         isDraggable = false;
-        // if(isMouseInSendArea())
-        //     pairToSend(socket);
-
+        if(isMouseInSlideArea() && checkMouseOnImage() && selectedFile)
+            slide();
+        if(isMouseInRejectArea() && checkMouseOnImage()){
+            reject();
+            showMessage("You have rejected file from "+gPartnerName);
+        }
     };
 
     function onTouchMove(event){
@@ -378,17 +457,20 @@ var setMouseEvent = function(){
         canMouseX = parseInt(event.targetTouches[0].pageX - offsetX);
         canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         imgX += (canMouseX-oldX);
-        // imgY += (canMouseY-oldY);
         if(!isImgInCanvas())
             return;
         if(isDragging){
             canvas.width = canvas.width;
             context.drawImage(img,canMouseX-imgOffsetX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
             writeOnCanvas(selectText,0.5);
-            var okToSend = isMouseInSendArea() && !isFileSent;
+            var okToSend = !isFileSent;
             if(okToSend){
                 pairedSend(socket);
             }
+            // if(isReceiver)
+            //     sendImageCoords(socket,canvas.width+imgX,(canvas.height-imgHeight)/2);
+            // else
+                
             sendImageCoords(socket,canMouseX-imgOffsetX-canvas.width,canMouseY-imgOffsetY);
         }
     };
@@ -398,11 +480,7 @@ var setMouseEvent = function(){
         canMouseY = parseInt(event.targetTouches[0].pageY - offsetY);
         isDragging = false;
         isDraggable = false;
-        // if(isMouseInSendArea())
-        //     pairToSend(socket);
     }
-            //console.log(canMouseX + " " +canMouseY);
-
 
     canvas.onmousedown = onMouseDown;
     canvas.onmouseup = onMouseUp;
@@ -415,6 +493,48 @@ var setMouseEvent = function(){
 
 }
 
+var clearMouseEvent = function() {
+    canvas.onmousemove = null;
+    canvas.onmouseup = null;
+    canvas.onmouseout = null;
+    canvas.onmousedown = null;
+    // canvas.removeEventListener
+    console.log(setMouseEvent().onTouchEnd);
+};
+
+var onSlide = function(imgX) {
+    if(imgX < (canvas.width-imgWidth)/2){
+        setTimeout(function(){
+            imgX+=10;
+            canvas.width = canvas.width;
+            context.drawImage(img,imgX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
+            onSlide(imgX);
+        },50);
+        
+    }
+};
+
+var onReject = function(imgX) {
+    if(imgX > (canvas.width-imgWidth)/2){
+        setTimeout(function(){
+            imgX-=40;
+            canvas.width = canvas.width;
+            context.drawImage(img,imgX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
+            writeOnCanvas(selectText,0.5);
+            onReject(imgX);
+        },50);
+    }
+    else{
+        isSender = false;
+        isReceiver = false;
+        isFileCompleted = true;
+        isFileSent = false;
+        isFileDownloading = false;
+        setMouseEvent();
+        canvas.addEventListener("click",canvasOnClick,false);
+    }
+};
+
 var sendImageCoords = function(socket,x,y) {
     if(!isFileSent)
         return;
@@ -423,7 +543,7 @@ var sendImageCoords = function(socket,x,y) {
         'conID':gConID,
         'X':x,
         'Y':y
-    })
+    });
 };
 
 /**
@@ -450,7 +570,11 @@ var sendImageCoords = function(socket,x,y) {
  };
 
 var pairedSend = function(socket){
+    if(isReceiver)
+        return;
     if(isPaired){
+        isSender = true;
+        isReceiver = false;
         startSending(socket,gConID,id,gPartnerID);
     }
     else{
@@ -513,6 +637,8 @@ var onStartSending = function(socket){
     isFileCompleted = true;
     isFileSent = false;
     isFileDownloading = false;
+    isSender = false;
+    isReceiver = true;
     canvas.width = canvas.width;
     img = null;
     canvas.removeEventListener("click",canvasOnClick,false);
@@ -537,21 +663,17 @@ var sendAsOneFile = function(socket, conID){
 
     // update the progress bar while uploading
     progressBar.hidden = false;
-    xhr.upload.onprogress = function(e) {
-        if (e.lengthComputable) {
-            var percent = e.loaded / e.total;
-            progressBar.value = percent * 100;
-
-            socket.emit('uploadProgress', {
-                'connectionID': conID,
-                'progress': Math.round(percent * 100)
-            });
-        }
-    };
 
     var fd = new FormData();
+    var date = new Date();
+    date = date.toString();
+    date = date.replace(/ /g,"_");
+    date = date.replace(/:/g,"_");
     fd.append('uploadedFile', selectedFile['handle']);
+    fd.append('sender',id);
+    fd.append('fileName',date+selectedFile['name']);
     xhr.send(fd);
+    isFileSent = true;
 }
 
 var sliceAndSend = function(conID) {
@@ -757,10 +879,14 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
             regroupSlicedFile(xhr.response,seq,maxseq, fileName,socket);
         }
         xhr.send();
-
     }
     else{
-        drawImageOnCanvas(data.fileURL);
+        URL = url;
+        img = new Image();
+        img.src = url;
+        drawImageOnCanvas(url,0,0);
+        downloadLink.href = url.replace(/file/,"download");
+        downloadButton.hidden = false;
     }
 };
 
@@ -906,6 +1032,7 @@ var onload = function(socket){
     socket.on('pairSucceeded', function(data) {
         gConID = data.connectionID;
         gPartnerID = data.partnerID;
+        gPartnerName = data.partnerName;
         isPaired = true;
         isFileCompleted = true;
         isFileSent = false;
@@ -946,7 +1073,12 @@ var onload = function(socket){
 
     socket.on('imageCoords', function(data) {
         // drawImageOnCanvas(fileMatrix[0].toURL(),data.X,data.Y);
-        drawImageOnCanvas(fileMatrix[0].toURL(),data.X);
+        if(SLICE)
+            drawImageOnCanvas(fileMatrix[0].toURL(),data.X);
+        else{
+            drawImageOnCanvas(URL,data.X);
+            console.log(URL);
+        }
     });
 
     socket.on('downloadLink', function(data) {
@@ -958,6 +1090,28 @@ var onload = function(socket){
         queryUsersNearbyCallback(data.id,data.name,data.distance,data.status);
     });
     
+    socket.on('slide',function(data){
+        onSlide(data.imgX);
+    });
+
+    socket.on('reject',function(data){
+        showMessage("Your partner "+gPartnerName+" has rejected your file.")
+        onReject(data.imgX);
+    });
+
+    socket.on('downloadDone', function(data){
+        writeOnCanvas(selectText,0.5);
+        canvas.addEventListener("click",canvasOnClick,false);
+        selectedFile = null;
+        isFileCompleted = true;
+        isFileSent = false;
+        isFileDownloading = false;
+        isSender = false;
+        isReceiver = false;
+        img = null;
+        showMessage("Your partner "+gPartnerName+" has accepted your file.")
+    })
+
     /**
      * Try to get geolocation on initialization
      *
@@ -987,6 +1141,12 @@ var onload = function(socket){
         selectText = "Tap here to select new file";
         writeOnCanvas(selectText,0.5);
         canvas.addEventListener("click",canvasOnClick,false);
+        isSender = false;
+        isReceiver = false;
+        socket.emit('downloadDone', {
+            'connectionID': gConID,
+            'senderID': id
+        });
     };
 
 
