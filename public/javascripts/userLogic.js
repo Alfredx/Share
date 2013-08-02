@@ -200,7 +200,7 @@ fileField.addEventListener('change', function(evt) {
 }, false);
 
 var canvasOnClick = function(event){
-    if(event.layerY < 45)
+    if(event.layerY < canvas.height/8)
         fileField.click();
 };
 
