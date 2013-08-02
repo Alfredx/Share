@@ -545,7 +545,7 @@ var sendImageCoords = function(socket,x,y) {
         'sender':id,
         'conID':gConID,
         'X':x,
-        'Y':y
+        'imgWidth':imgWidth
     });
 };
 
@@ -1079,9 +1079,9 @@ var onload = function(socket){
     socket.on('imageCoords', function(data) {
         // drawImageOnCanvas(fileMatrix[0].toURL(),data.X,data.Y);
         if(SLICE)
-            drawImageOnCanvas(fileMatrix[0].toURL(),data.X);
+            drawImageOnCanvas(fileMatrix[0].toURL(),data.X/data.imgWidth*imgWidth);
         else{
-            drawImageOnCanvas(URL,data.X);
+            drawImageOnCanvas(URL,data.X/data.imgWidth*imgWidth);
             console.log(URL);
         }
     });

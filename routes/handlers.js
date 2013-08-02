@@ -264,7 +264,7 @@ var initSocket = function(socket) {
         var con = paired.get(conID);
         con.getTheOther(senderID).socket.emit('imageCoords', {
                 'X':data.X,
-                'Y':data.Y
+                'imgWidth':data.imgWidth
             });
     });
 
