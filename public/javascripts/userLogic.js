@@ -164,8 +164,8 @@ fileField.addEventListener('change', function(evt) {
     output = [];
     for (var idx = 0, size = files.length; idx < size; idx++) {
         f = files[idx];
-        if(f['size'] > 102400){
-            alert("Please do not choose a file over 100KB");
+        if(f['size'] > 204800){
+            alert("Please do not choose a file over 200KB");
             return;
         }
         var url = window.URL || window.webkitURL;
@@ -521,8 +521,8 @@ var onReject = function(imgX) {
         setTimeout(function(){
             imgX-=40;
             canvas.width = canvas.width;
-            context.drawImage(img,imgX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
             writeOnCanvas(selectText,0.5);
+            context.drawImage(img,imgX,(canvas.height-imgHeight)/2,imgWidth,imgHeight);
             onReject(imgX);
         },50);
     }
@@ -623,7 +623,7 @@ var startSending = function(socket, conID, senderID, receiverID) {
             sendAsOneFile(socket, conID);
         }
         
-        showMessage("Uploading now...",'upload');
+        // showMessage("Uploading now...",'upload');
         socket.emit('startSending', {
             'connectionID': conID,
             'senderID': senderID
@@ -732,7 +732,7 @@ var uploadAChunk = function(chunk, seq, conID) {
     xhr.onload = function(e) {
         progressBar.hidden = true;
         if (this.status === 200) {
-            showMessage("Sending... "+seq,'upload');
+            //showMessage("Sending... "+seq,'upload');
         } else {
             showMessage("Error uploading?!",'upload');
             console.log("ERROR uploading?");
@@ -747,12 +747,14 @@ var uploadAChunk = function(chunk, seq, conID) {
  */
 var getGeolocation = function(socket) {
     var onSuccess = function(pos) {
+        if(!geo)
+            showMessage("Geographic info loaded");
         geo = {
             'latitude': pos.coords.latitude,
             'longitude': pos.coords.longitude,
             'accuracy': pos.coords.accuracy
         };
-        // alert(geo.latitude +" " + geo.longitude + " "+ geo.accuracy);
+        
         socket.emit('geoLocationUpdate', {
             'id':id,
             'geo':geo
@@ -859,7 +861,7 @@ var onFileAllReceived = function(socket){
     isFileCompleted = true;
     isFileDownloading = false;
 
-    showMessage("File received",'upload');
+    // showMessage("File received",'upload');
     socket.emit('allReceived',{
         'conID':gConID,
         'senderID':gPartnerID
@@ -871,7 +873,7 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
     // fileDelegate.className = "btn btn-inverse btn-large span3";
     downloadButton.hidden = true;
     downloadLink.href = "";
-    showMessage("Receiving file...",'upload');
+    //showMessage("Receiving file...",'upload');
     //isFileDownloading = true;
     if(SLICE){
         initFileMatrix(maxseq);
@@ -887,7 +889,7 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
         URL = url;
         img = new Image();
         img.src = url;
-        drawImageOnCanvas(url,0,0);
+        //drawImageOnCanvas(url,0,0);
         downloadLink.href = url.replace(/file/,"download");
         downloadButton.hidden = false;
     }
@@ -1113,12 +1115,7 @@ var onload = function(socket){
         isReceiver = false;
         img = null;
         showMessage("Your partner "+gPartnerName+" has accepted your file.")
-    })
-
-    /**
-     * Try to get geolocation on initialization
-     *
-     */
+    });
     
 
     sendButton.onclick = function() {
