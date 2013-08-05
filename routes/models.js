@@ -170,7 +170,7 @@ var Users = function() {
      *  The largest legal geo distance(Meter) of two users
      *  @type {Number}
      */
-    var MAXDISTANCE = 500000000.0;
+    var MAXDISTANCE = 50.0;
     /**
      * Given a baseUser, find the nearest user.
      * @param  {Object} baseUser The user to be compared.

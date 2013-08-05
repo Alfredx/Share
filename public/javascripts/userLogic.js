@@ -19,17 +19,18 @@ var setMessageDefaults = function(){
     }
 }
 
-var showMessage = function(msg,id){
+var showMessage = function(msg,id,time){
     if(!id)
         id = 'only-one-message';
+    if(!time)
+        time = 3;
     setMessageDefaults();
     $.globalMessenger().post({
         message:msg,
-        hideAfter:3,
+        hideAfter:time,
         id:id
     });
 }
-
 
 var fileField = document.getElementById('sendFile');
 var fileDelegate = document.getElementById('fileDelegate');
@@ -55,6 +56,7 @@ var tableData = {};
 var selectedFile = null;
 
 
+var watchID = null;
 /**
  * The identification for a specific user.
  * Set by the server.
@@ -558,13 +560,13 @@ var sendImageCoords = function(socket,x,y) {
         alert("Not connected to server => unable to share!");
         return;
     }
-    if (navigator.geolocation) {
-        getGeolocation(socket);
-    }
-    else{
-       showMessage("Your browser does not support Geolocation",'geo');
-       return;
-    }
+    // if (navigator.geolocation) {
+    //     getGeolocation(socket);
+    // }
+    // else{
+    //    showMessage("Your browser does not support Geolocation",'geo');
+    //    return;
+    // }
     socket.emit('findPair',{
         'id': id,
         'geo':geo
@@ -590,13 +592,13 @@ var pairTo = function(socket,targetID,targetName) {
         alert("Not connected to server => unable to share!");
         return;
     }
-    if (navigator.geolocation) {
-        getGeolocation(socket);
-    }
-    else{
-       showMessage("Your browser does not support Geolocation",'geo');
-       return;
-    }
+    // if (navigator.geolocation) {
+    //     getGeolocation(socket);
+    // }
+    // else{
+    //    showMessage("Your browser does not support Geolocation",'geo');
+    //    return;
+    // }
     socket.emit('pairTo',{
         'id':id,
         'targetID':targetID
@@ -747,14 +749,19 @@ var uploadAChunk = function(chunk, seq, conID) {
  */
 var getGeolocation = function(socket) {
     var onSuccess = function(pos) {
-        if(!geo)
-            showMessage("Geographic info loaded");
+        if(pos.coords.accuracy > 100){
+            showMessage("Your geographic information is currently unavailable, please wait",'geo');
+            return;
+        }
+        if(!geo){
+            showMessage("Geographic info loaded",'geo');
+        }
         geo = {
             'latitude': pos.coords.latitude,
             'longitude': pos.coords.longitude,
             'accuracy': pos.coords.accuracy
         };
-        
+
         socket.emit('geoLocationUpdate', {
             'id':id,
             'geo':geo
@@ -766,10 +773,12 @@ var getGeolocation = function(socket) {
             2: "Can't detect your location",    // position unavailable
             3: "Connection timeout"             // timeout
         };
-        showMessage("Error retrieving GEO-LOCATION: " + errors[err.code],'geo');
-        getGeolocation(socket);
+        showMessage("Error retrieving GEO-LOCATION: " + errors[err.code] +"\nRetrying...please wait...",'geo');
     };
-    navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+    if(!geo){
+        showMessage("Loading your geographic location, please wait...",'geo',6000000);
+    }
+    watchID = navigator.geolocation.watchPosition(onSuccess, onError, {
         enableHighAccuracy: true
     });
 };
@@ -1043,7 +1052,7 @@ var onload = function(socket){
         isFileCompleted = true;
         isFileSent = false;
         showMessage("Succeeded on making pair with " + data.partnerName);
-        
+        navigator.geolocation.clearWatch(watchID);
         initCanvas();
     });
 
