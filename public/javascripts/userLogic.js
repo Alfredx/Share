@@ -32,6 +32,8 @@ var showMessage = function(msg,id,time){
     });
 }
 
+var header = document.getElementById('header');
+var description = document.getElementById('des');
 var fileField = document.getElementById('sendFile');
 var fileDelegate = document.getElementById('fileDelegate');
 var outputField = document.getElementById('selectedList');
@@ -207,6 +209,7 @@ var canvasOnClick = function(event){
 };
 
 var initCanvas = function(){
+    getWindowsWidthAndHeight();
     tableField.hidden = true;
     clearInterval(tableInterval);
     canvas.hidden = false;
@@ -1053,6 +1056,8 @@ var onload = function(socket){
         isFileSent = false;
         showMessage("Succeeded on making pair with " + data.partnerName);
         navigator.geolocation.clearWatch(watchID);
+        header.hidden = true;
+        description.innerHTML = "Now select your file and drag it to the right!";
         initCanvas();
     });
 
