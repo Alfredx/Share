@@ -3,7 +3,7 @@
  */
 
 var models = require('./models');
-var deprecateHandlers = require('./deprecate_handlers');
+var deprecateHandlers = require('./deprecated_handlers');
 var path = require("path");
 var fs = require("fs");
 var url = require("url");
