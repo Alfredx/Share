@@ -767,6 +767,7 @@ var getGeolocation = function(socket) {
             3: "Connection timeout"             // timeout
         };
         showMessage("Error retrieving GEO-LOCATION: " + errors[err.code],'geo');
+        getGeolocation(socket);
     };
     navigator.geolocation.getCurrentPosition(onSuccess, onError, {
         enableHighAccuracy: true
