@@ -657,7 +657,7 @@ var sendAsOneFile = function(socket, conID){
     xhr.onload = function(e) {
         progressBar.hidden = true;
         if (this.status === 200) {
-            showMessage("Uploading finished.",'upload');
+            // showMessage("Uploading finished.",'upload');
         } else {
             showMessage("Error uploading?!",'upload');
             console.log("ERROR uploading?");
@@ -1152,7 +1152,7 @@ var onload = function(socket){
 
     
     /*********************************************************************/
-    //depreciate socket message
+    //deprecated socket message
     /**
      * Successfully making a pair, confirm sending files to it?
      * @param  {Object} data A JSON object that contains multiple info.

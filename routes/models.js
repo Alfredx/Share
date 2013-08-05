@@ -86,7 +86,7 @@ var UserData = function() {
     this.fileSize = null;
 
     /**
-     *  @depreciate
+     *  @deprecated
      */
      /**
      * The longitude of geolocation.
@@ -400,7 +400,7 @@ var Connection = function() {
     };
 
     /**
-     *  depreciate
+     *  deprecated
      */
     this.userConfirmed = function(userID) {
         var legal = this.clients[0].id === userID || this.clients[1].id === userID;
@@ -525,7 +525,7 @@ var Pairs = function() {
     };
 
     /**
-     *  depreciate
+     *  deprecated
      */
      /**
      * Help speed up the search of connections from users' IDs.

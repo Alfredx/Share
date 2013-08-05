@@ -3,7 +3,7 @@
  */
 
 var models = require('./models');
-var depreciateHandlers = require('./depreciate_handlers');
+var deprecateHandlers = require('./deprecate_handlers');
 var path = require("path");
 var fs = require("fs");
 var url = require("url");
@@ -15,15 +15,15 @@ var Connection = models.Connection;
 var Pairs = models.Pairs;
 
 /**
- *  depreciated variables and handlers
+ *  deprecated variables and handlers
     just undefined here dont know why
  */
-var toSend = depreciateHandlers.toSend;
-var toReceive = depreciateHandlers.toReceive;
-var onPairToReceive = depreciateHandlers.onPairToReceive;
-var onPairToSend = depreciateHandlers.onPairToSend;
-var onConfirmed = depreciateHandlers.onConfirmed;
-var onConfirmFailed = depreciateHandlers.onConfirmFailed;
+var toSend = deprecateHandlers.toSend;
+var toReceive = deprecateHandlers.toReceive;
+var onPairToReceive = deprecateHandlers.onPairToReceive;
+var onPairToSend = deprecateHandlers.onPairToSend;
+var onConfirmed = deprecateHandlers.onConfirmed;
+var onConfirmFailed = deprecateHandlers.onConfirmFailed;
 
 
 
@@ -322,7 +322,7 @@ var initSocket = function(socket) {
     });
 
     /*********************************************************
-     *  depreciated socket message
+     *  deprecated socket message
      */
     /**
      * User tries to pair to receive files.
