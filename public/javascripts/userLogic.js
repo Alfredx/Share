@@ -1027,6 +1027,8 @@ var onload = function(socket){
             showMessage('Connected, id is ' + data);
         }
         var name = prompt("To receive better experience\nPlease tell us your name:","(your name here)");
+        if(name === null || name == "(your name here)");
+            name = "user "+id;
         socket.emit('iam', {
             'id' : id,
             'name':name,
