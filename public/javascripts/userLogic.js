@@ -776,7 +776,7 @@ var getGeolocation = function(socket) {
             2: "Can't detect your location",    // position unavailable
             3: "Connection timeout"             // timeout
         };
-        showMessage("Error retrieving GEO-LOCATION: " + errors[err.code] +"\nRetrying...please wait...",'geo');
+        showMessage("Error retrieving GEO-LOCATION: " + errors[err.code] +"\nRetrying...please wait...");
     };
     if(!geo){
         showMessage("Loading your geographic location, please wait...",'geo',6000000);
