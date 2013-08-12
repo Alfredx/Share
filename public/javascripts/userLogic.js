@@ -753,7 +753,7 @@ var uploadAChunk = function(chunk, seq, conID) {
 var getGeolocation = function(socket) {
     var onSuccess = function(pos) {
         if(pos.coords.accuracy > 100){
-            showMessage("Your geographic information is currently unavailable, please wait",'geo');
+            showMessage("Your geographic information is currently unavailable, please wait...");
             //getGeolocation(socket);
             return;
         }
@@ -1015,8 +1015,8 @@ var onload = function(socket){
     });
     socket.on('error', function() {
         // something bad happened..
-        showMessage('Error happened.. Why?');
-        console.log('Error happened.. Why?');
+        showMessage('Error');
+        console.log('Error');
     });
 
     /**
