@@ -754,6 +754,7 @@ var getGeolocation = function(socket) {
     var onSuccess = function(pos) {
         if(pos.coords.accuracy > 100){
             showMessage("Your geographic information is currently unavailable, please wait",'geo');
+            //getGeolocation(socket);
             return;
         }
         if(!geo){
@@ -777,6 +778,7 @@ var getGeolocation = function(socket) {
             3: "Connection timeout"             // timeout
         };
         showMessage("Error retrieving GEO-LOCATION: " + errors[err.code] +"\nRetrying...please wait...");
+        //getGeolocation(socket);
     };
     if(!geo){
         showMessage("Loading your geographic location, please wait...",'geo',6000000);
@@ -1026,6 +1028,7 @@ var onload = function(socket){
             id = data;
             showMessage('Connected, id is ' + data);
         }
+
         var name = prompt("To receive better experience\nPlease tell us your name:","(your name here)");
         if(name === null || name == "(your name here)")
             name = "user "+id;
@@ -1044,7 +1047,7 @@ var onload = function(socket){
             'id':id,
             'geo':geo
         })
-    })
+    });
     
     /**
      *  Succeeded on making a pair
