@@ -389,7 +389,7 @@ var setMouseEvent = function(){
         canMouseY = parseInt(event.layerY);
         if(isMouseInSlideArea() && checkMouseOnImage() && selectedFile)
             slide();
-        if(isMouseInRejectArea() && checkMouseOnImage()){
+        if(isMouseInRejectArea() && checkMouseOnImage() && isReceiver){
             reject();
             showMessage("You have rejected file from "+gPartnerName);
         }
@@ -1028,13 +1028,15 @@ var onload = function(socket){
             id = data;
             showMessage('Connected, id is ' + data);
         }
-
-        var name = prompt("To receive better experience\nPlease tell us your name:","(your name here)");
-        if(name === null || name == "(your name here)")
-            name = "user "+id;
+        if(!localStorage.name){
+            var name = prompt("To receive better experience\nPlease tell us your name:","(your name here)");
+            if(name === null || name == "(your name here)")
+                name = "user "+id;
+            localStorage.name = name;
+        }
         socket.emit('iam', {
             'id' : id,
-            'name':name,
+            'name':localStorage.name,
             'geo': geo
         });
         onload(socket);

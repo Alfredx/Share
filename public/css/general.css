@@ -39,7 +39,6 @@ filter:alpha(opacity=0);/* 兼容IE */
 .bb{
 background: #3C3C3C;	
 background-image: url(../img/texture.png);
-font-family: 'Poiret One', cursive;
 -webkit-user-select: none;
 margin-left: -45px;
 }
@@ -69,7 +68,6 @@ font-family: 'Quicksand', sans-serif;
 body{
 background: #3C3C3C;	
 background-image: url(../img/texture.png);
-font-family: 'Poiret One', cursive;
 -webkit-user-select: none;
 text-align:center;
 }
