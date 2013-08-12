@@ -752,6 +752,7 @@ var uploadAChunk = function(chunk, seq, conID) {
  */
 var getGeolocation = function(socket) {
     var onSuccess = function(pos) {
+        var socket_ = socket;
         console.log('pos.coords.accuracy: ' + pos.coords.accuracy);
         if(pos.coords.accuracy > 100){
             showMessage("Your geographic information is currently unavailable, please wait...");
@@ -767,7 +768,7 @@ var getGeolocation = function(socket) {
             'accuracy': pos.coords.accuracy
         };
 
-        socket.emit('geoLocationUpdate', {
+        socket_.emit('geoLocationUpdate', {
             'id':id,
             'geo':geo
         });
@@ -913,12 +914,10 @@ var onUploadSuccess = function(socket,seq,maxseq,fileName,url){
 };
 
 var startQueryUsersNearby = function(socket){
-    if (geo && socket.emit) {
-        socket.emit('usersNearby',{
-            'id':id,
-            'geo':geo
-        });
-    }
+    socket.emit('usersNearby',{
+        'id':id,
+        'geo':geo
+    });
 };
 
 var queryUsersNearbyCallback = function(id,name,distance,status){
